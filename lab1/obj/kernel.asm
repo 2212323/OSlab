@@ -36,11 +36,7 @@ int kern_init(void) {
 int kern_init(void) {
     80200020:	e406                	sd	ra,8(sp)
     memset(edata, 0, end - edata);
-<<<<<<< HEAD
     80200022:	568000ef          	jal	ra,8020058a <memset>
-=======
-    80200022:	171000ef          	jal	ra,80200992 <memset>
->>>>>>> 9a88a03a338bcfa903595218a0b8a40b7a68e64a
 
     cons_init();  // init the console
     80200026:	14a000ef          	jal	ra,80200170 <cons_init>
@@ -48,15 +44,9 @@ int kern_init(void) {
     const char *message = "(THU.CST) os is loading ...\n";
     cprintf("%s\n\n", message);
     8020002a:	00001597          	auipc	a1,0x1
-<<<<<<< HEAD
     8020002e:	9ae58593          	addi	a1,a1,-1618 # 802009d8 <etext>
     80200032:	00001517          	auipc	a0,0x1
     80200036:	9c650513          	addi	a0,a0,-1594 # 802009f8 <etext+0x20>
-=======
-    8020002e:	97e58593          	addi	a1,a1,-1666 # 802009a8 <etext+0x4>
-    80200032:	00001517          	auipc	a0,0x1
-    80200036:	99650513          	addi	a0,a0,-1642 # 802009c8 <etext+0x24>
->>>>>>> 9a88a03a338bcfa903595218a0b8a40b7a68e64a
     8020003a:	030000ef          	jal	ra,8020006a <cprintf>
 
     print_kerninfo();
@@ -136,11 +126,7 @@ int cprintf(const char *fmt, ...) {
     int cnt = 0;
     80200092:	c202                	sw	zero,4(sp)
     vprintfmt((void *)cputch, &cnt, fmt, ap);
-<<<<<<< HEAD
     80200094:	574000ef          	jal	ra,80200608 <vprintfmt>
-=======
-    80200094:	512000ef          	jal	ra,802005a6 <vprintfmt>
->>>>>>> 9a88a03a338bcfa903595218a0b8a40b7a68e64a
     cnt = vcprintf(fmt, ap);
     va_end(ap);
     return cnt;
@@ -161,11 +147,7 @@ void print_kerninfo(void) {
     extern char etext[], edata[], end[], kern_init[];
     cprintf("Special kernel symbols:\n");
     802000a2:	00001517          	auipc	a0,0x1
-<<<<<<< HEAD
     802000a6:	95e50513          	addi	a0,a0,-1698 # 80200a00 <etext+0x28>
-=======
-    802000a6:	92e50513          	addi	a0,a0,-1746 # 802009d0 <etext+0x2c>
->>>>>>> 9a88a03a338bcfa903595218a0b8a40b7a68e64a
 void print_kerninfo(void) {
     802000aa:	e406                	sd	ra,8(sp)
     cprintf("Special kernel symbols:\n");
@@ -174,7 +156,6 @@ void print_kerninfo(void) {
     802000b0:	00000597          	auipc	a1,0x0
     802000b4:	f5a58593          	addi	a1,a1,-166 # 8020000a <kern_init>
     802000b8:	00001517          	auipc	a0,0x1
-<<<<<<< HEAD
     802000bc:	96850513          	addi	a0,a0,-1688 # 80200a20 <etext+0x48>
     802000c0:	fabff0ef          	jal	ra,8020006a <cprintf>
     cprintf("  etext  0x%016x (virtual)\n", etext);
@@ -182,35 +163,18 @@ void print_kerninfo(void) {
     802000c8:	91458593          	addi	a1,a1,-1772 # 802009d8 <etext>
     802000cc:	00001517          	auipc	a0,0x1
     802000d0:	97450513          	addi	a0,a0,-1676 # 80200a40 <etext+0x68>
-=======
-    802000bc:	93850513          	addi	a0,a0,-1736 # 802009f0 <etext+0x4c>
-    802000c0:	fabff0ef          	jal	ra,8020006a <cprintf>
-    cprintf("  etext  0x%016x (virtual)\n", etext);
-    802000c4:	00001597          	auipc	a1,0x1
-    802000c8:	8e058593          	addi	a1,a1,-1824 # 802009a4 <etext>
-    802000cc:	00001517          	auipc	a0,0x1
-    802000d0:	94450513          	addi	a0,a0,-1724 # 80200a10 <etext+0x6c>
->>>>>>> 9a88a03a338bcfa903595218a0b8a40b7a68e64a
     802000d4:	f97ff0ef          	jal	ra,8020006a <cprintf>
     cprintf("  edata  0x%016x (virtual)\n", edata);
     802000d8:	00004597          	auipc	a1,0x4
     802000dc:	f3858593          	addi	a1,a1,-200 # 80204010 <ticks>
     802000e0:	00001517          	auipc	a0,0x1
-<<<<<<< HEAD
     802000e4:	98050513          	addi	a0,a0,-1664 # 80200a60 <etext+0x88>
-=======
-    802000e4:	95050513          	addi	a0,a0,-1712 # 80200a30 <etext+0x8c>
->>>>>>> 9a88a03a338bcfa903595218a0b8a40b7a68e64a
     802000e8:	f83ff0ef          	jal	ra,8020006a <cprintf>
     cprintf("  end    0x%016x (virtual)\n", end);
     802000ec:	00004597          	auipc	a1,0x4
     802000f0:	f3c58593          	addi	a1,a1,-196 # 80204028 <end>
     802000f4:	00001517          	auipc	a0,0x1
-<<<<<<< HEAD
     802000f8:	98c50513          	addi	a0,a0,-1652 # 80200a80 <etext+0xa8>
-=======
-    802000f8:	95c50513          	addi	a0,a0,-1700 # 80200a50 <etext+0xac>
->>>>>>> 9a88a03a338bcfa903595218a0b8a40b7a68e64a
     802000fc:	f6fff0ef          	jal	ra,8020006a <cprintf>
     cprintf("Kernel executable memory footprint: %dKB\n",
             (end - kern_init + 1023) / 1024);
@@ -228,11 +192,7 @@ void print_kerninfo(void) {
     8020011e:	95be                	add	a1,a1,a5
     80200120:	85a9                	srai	a1,a1,0xa
     80200122:	00001517          	auipc	a0,0x1
-<<<<<<< HEAD
     80200126:	97e50513          	addi	a0,a0,-1666 # 80200aa0 <etext+0xc8>
-=======
-    80200126:	94e50513          	addi	a0,a0,-1714 # 80200a70 <etext+0xcc>
->>>>>>> 9a88a03a338bcfa903595218a0b8a40b7a68e64a
 }
     8020012a:	0141                	addi	sp,sp,16
     cprintf("Kernel executable memory footprint: %dKB\n",
@@ -262,11 +222,7 @@ void clock_set_next_event(void) { sbi_set_timer(get_cycles() + timebase); }
     8020013e:	67e1                	lui	a5,0x18
     80200140:	6a078793          	addi	a5,a5,1696 # 186a0 <kern_entry-0x801e7960>
     80200144:	953e                	add	a0,a0,a5
-<<<<<<< HEAD
     80200146:	05f000ef          	jal	ra,802009a4 <sbi_set_timer>
-=======
-    80200146:	7fc000ef          	jal	ra,80200942 <sbi_set_timer>
->>>>>>> 9a88a03a338bcfa903595218a0b8a40b7a68e64a
 }
     8020014a:	60a2                	ld	ra,8(sp)
     ticks = 0;
@@ -274,11 +230,7 @@ void clock_set_next_event(void) { sbi_set_timer(get_cycles() + timebase); }
     80200150:	ec07b223          	sd	zero,-316(a5) # 80204010 <ticks>
     cprintf("++ setup timer interrupts\n");
     80200154:	00001517          	auipc	a0,0x1
-<<<<<<< HEAD
     80200158:	97c50513          	addi	a0,a0,-1668 # 80200ad0 <etext+0xf8>
-=======
-    80200158:	94c50513          	addi	a0,a0,-1716 # 80200aa0 <etext+0xfc>
->>>>>>> 9a88a03a338bcfa903595218a0b8a40b7a68e64a
 }
     8020015c:	0141                	addi	sp,sp,16
     cprintf("++ setup timer interrupts\n");
@@ -291,11 +243,7 @@ void clock_set_next_event(void) { sbi_set_timer(get_cycles() + timebase); }
     80200164:	67e1                	lui	a5,0x18
     80200166:	6a078793          	addi	a5,a5,1696 # 186a0 <kern_entry-0x801e7960>
     8020016a:	953e                	add	a0,a0,a5
-<<<<<<< HEAD
     8020016c:	0390006f          	j	802009a4 <sbi_set_timer>
-=======
-    8020016c:	7d60006f          	j	80200942 <sbi_set_timer>
->>>>>>> 9a88a03a338bcfa903595218a0b8a40b7a68e64a
 
 0000000080200170 <cons_init>:
 
@@ -310,10 +258,14 @@ void cons_init(void) {}
 
 /* cons_putc - print a single character @c to console devices */
 void cons_putc(int c) { sbi_console_putchar((unsigned char)c); }
+<<<<<<< HEAD
     80200172:	0ff57513          	zext.b	a0,a0
 <<<<<<< HEAD
     80200176:	0150006f          	j	8020098a <sbi_console_putchar>
 =======
+=======
+    80200172:	0ff57513          	andi	a0,a0,255
+>>>>>>> 2e14c0511240a0db126130bd3cf9d734a52c4a18
     80200176:	7b20006f          	j	80200928 <sbi_console_putchar>
 >>>>>>> 9a88a03a338bcfa903595218a0b8a40b7a68e64a
 
@@ -1467,7 +1419,7 @@ vprintfmt(void (*putch)(int, void*), void *putdat, const char *fmt, va_list ap) 
     80200610:	4825                	li	a6,9
         switch (ch = *(unsigned char *)fmt ++) {
     80200612:	fdd6059b          	addiw	a1,a2,-35
-    80200616:	0ff5f593          	zext.b	a1,a1
+    80200616:	0ff5f593          	andi	a1,a1,255
     8020061a:	00140d13          	addi	s10,s0,1
     8020061e:	04b56263          	bltu	a0,a1,80200662 <vprintfmt+0xbc>
     80200622:	058a                	slli	a1,a1,0x2
@@ -1891,7 +1843,7 @@ printfmt(void (*putch)(int, void*), void *putdat, const char *fmt, ...) {
     80200650:	846a                	mv	s0,s10
     80200652:	00140d13          	addi	s10,s0,1
     80200656:	fdd6059b          	addiw	a1,a2,-35
-    8020065a:	0ff5f593          	zext.b	a1,a1
+    8020065a:	0ff5f593          	andi	a1,a1,255
     8020065e:	fcb572e3          	bgeu	a0,a1,80200622 <vprintfmt+0x7c>
             putch('%', putdat);
     80200662:	85a6                	mv	a1,s1

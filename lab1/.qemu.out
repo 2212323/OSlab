@@ -29,7 +29,4 @@ Special kernel symbols:
   end    0x0000000080204028 (virtual)
 Kernel executable memory footprint: 17KB
 ++ setup timer interrupts
-<<<<<<< HEAD
 100 ticks100 ticks100 ticks100 ticks100 ticks100 ticks100 ticks100 ticks100 ticks100 ticks
-=======
->>>>>>> 9518603d79711bf8879f54344d8859b96714af25

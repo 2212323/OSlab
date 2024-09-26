@@ -14,7 +14,7 @@ kern_entry:
     80200000:	00004117          	auipc	sp,0x4
     80200004:	00010113          	mv	sp,sp
 
-    tail kern_init
+    tail kern_init      # tail 指令是一个优化的跳转指令，等效于 j kern_init，但会在跳转前释放当前函数的栈帧
     80200008:	a009                	j	8020000a <kern_init>
 
 000000008020000a <kern_init>:
@@ -708,7 +708,7 @@ static inline void trap_dispatch(struct trapframe *tf) {
 00000000802004e0 <__alltraps>:
     .endm
 
-    .globl __alltraps
+    .globl __alltraps        #入口函数，陷阱处理的入口点
 .align(2)
 __alltraps:
     SAVE_ALL
@@ -764,7 +764,7 @@ __alltraps:
 0000000080200548 <__trapret>:
     # sp should be the same as before "jal trap"
 
-    .globl __trapret
+    .globl __trapret           # 陷阱处理完成后的返回点
 __trapret:
     RESTORE_ALL
     80200548:	6492                	ld	s1,256(sp)

@@ -76,7 +76,7 @@ Disassembly of section .text:
     802000b2:	8082                	ret
 
 00000000802000b4 <cons_putc>:
-    802000b4:	0ff57513          	andi	a0,a0,255
+    802000b4:	0ff57513          	zext.b	a0,a0
     802000b8:	aec5                	j	802004a8 <sbi_console_putchar>
 
 00000000802000ba <printnum>:
@@ -166,7 +166,7 @@ Disassembly of section .text:
     8020018c:	05500513          	li	a0,85
     80200190:	4825                	li	a6,9
     80200192:	fdd6059b          	addiw	a1,a2,-35
-    80200196:	0ff5f593          	andi	a1,a1,255
+    80200196:	0ff5f593          	zext.b	a1,a1
     8020019a:	00140d13          	addi	s10,s0,1
     8020019e:	04b56263          	bltu	a0,a1,802001e2 <vprintfmt+0xbc>
     802001a2:	058a                	slli	a1,a1,0x2
@@ -194,7 +194,7 @@ Disassembly of section .text:
     802001d0:	846a                	mv	s0,s10
     802001d2:	00140d13          	addi	s10,s0,1
     802001d6:	fdd6059b          	addiw	a1,a2,-35
-    802001da:	0ff5f593          	andi	a1,a1,255
+    802001da:	0ff5f593          	zext.b	a1,a1
     802001de:	fcb572e3          	bgeu	a0,a1,802001a2 <vprintfmt+0x7c>
     802001e2:	85a6                	mv	a1,s1
     802001e4:	02500513          	li	a0,37

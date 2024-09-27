@@ -1,8 +1,8 @@
 #include <riscv.h>
 
-    .macro SAVE_ALL
+    .macro SAVE_ALL 
 
-    csrw sscratch, sp
+    csrw sscratch, sp   #将当前堆栈指针保存到 sscratch 寄存器
 
     addi sp, sp, -36 * REGBYTES
     # save x registers
@@ -36,31 +36,31 @@
     STORE x28, 28*REGBYTES(sp)
     STORE x29, 29*REGBYTES(sp)
     STORE x30, 30*REGBYTES(sp)
-    STORE x31, 31*REGBYTES(sp)
+    STORE x31, 31*REGBYTES(sp)            #存储所有寄存器的值
 
     # get sr, epc, badvaddr, cause
     # Set sscratch register to 0, so that if a recursive exception
     # occurs, the exception vector knows it came from the kernel
-    csrrw s0, sscratch, x0
-    csrr s1, sstatus
+    csrrw s0, sscratch, x0      #将 sscratch 寄存器的值保存到 s0，并将 sscratch 设置为0  # sscratch 寄存器通常用于保存陷阱处理过程中需要临时保存的值，设置为0意味着其正在进行陷阱处理，避免出现递归陷阱
+    csrr s1, sstatus    #将 sstatus 寄存器的值读入 s1 寄存器  # sstatus 寄存器保存了当前处理器的状态信息
     csrr s2, sepc
     csrr s3, sbadaddr
     csrr s4, scause
 
-    STORE s0, 2*REGBYTES(sp)
+    STORE s0, 2*REGBYTES(sp)          #上面保存的参数入栈
     STORE s1, 32*REGBYTES(sp)
     STORE s2, 33*REGBYTES(sp)
     STORE s3, 34*REGBYTES(sp)
     STORE s4, 35*REGBYTES(sp)
     .endm
 
-    .macro RESTORE_ALL
+    .macro RESTORE_ALL               #恢复所有寄存器的值
 
     LOAD s1, 32*REGBYTES(sp)
     LOAD s2, 33*REGBYTES(sp)
 
-    csrw sstatus, s1
-    csrw sepc, s2
+    csrw sstatus, s1           # sstatus 和 sepc保存了处理器的状态和异常发生时的程序计数器，需要恢复以确保处理器能够正确返回到异常发生前的状态
+    csrw sepc, s2              # 其他的则不用恢复
 
     # restore x registers
     LOAD x1, 1*REGBYTES(sp)
@@ -98,7 +98,7 @@
     #addi sp, sp, 36 * REGBYTES
     .endm
 
-    .globl __alltraps
+    .globl __alltraps        #入口函数，陷阱处理的入口点
 .align(2)
 __alltraps:
     SAVE_ALL
@@ -107,7 +107,7 @@ __alltraps:
     jal trap
     # sp should be the same as before "jal trap"
 
-    .globl __trapret
+    .globl __trapret           # 陷阱处理完成后的返回点
 __trapret:
     RESTORE_ALL
     # return from supervisor call

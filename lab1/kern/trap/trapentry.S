@@ -2,7 +2,11 @@
 
     .macro SAVE_ALL 
 
-    csrw sscratch, sp   #将当前堆栈指针保存到 sscratch 寄存器
+    csrw sscratch, sp   #将当前堆栈指针保存到 sscratch 寄存器    
+
+    #依次保存32个通用寄存器。但栈顶指针需要特殊处理。
+    #因为我们想在trapFrame里保存分配36个REGBYTES之前的sp
+    #也就是保存之前写到sscratch里的sp的值
 
     addi sp, sp, -36 * REGBYTES
     # save x registers

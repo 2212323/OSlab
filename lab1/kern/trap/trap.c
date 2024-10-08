@@ -28,9 +28,9 @@ void idt_init(void) {
     extern void __alltraps(void);
     /* Set sscratch register to 0, indicating to exception vector that we are
      * presently executing in the kernel */
-    write_csr(sscratch, 0);
+    write_csr(sscratch, 0);     // 将sscratch寄存器设置为0，表示我们现在在内核中执行
     /* Set the exception vector address */
-    write_csr(stvec, &__alltraps);
+    write_csr(stvec, &__alltraps);  // stvec中断向量表基址，指向不同的中断处理程序的地址
 }
 
 /* trap_in_kernel - test if trap happened in kernel */

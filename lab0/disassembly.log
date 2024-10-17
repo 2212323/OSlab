@@ -1,0 +1,8 @@
+Undefined command: "".  Try "help".
+Note: breakpoint 1 also set at pc 0x80200000.
+Breakpoint 2 at 0x80200000: file kern/init/entry.S, line 7.
+Warning: command 'target record' is deprecated.
+Use 'target record-full'.
+
+Process record: the current architecture doesn't support record function.
+Process record: the current architecture doesn't support record function.

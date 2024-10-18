@@ -42,7 +42,18 @@ void idt_init(void) {
      * check the libs/x86.h to know more.
      *     Notice: the argument of lidt is idt_pd. try to find it!
      */
-
+    /* LAB1 你的代码：步骤 2 */
+        /* (1) 每个中断服务例程 (ISR) 的入口地址在哪里？
+        *     所有 ISR 的入口地址都存储在 __vectors 中。uintptr_t __vectors[] 在哪里？
+        *     __vectors[] 在 kern/trap/vector.S 中，它是由 tools/vector.c 生成的
+        *     （在 lab1 中尝试使用 "make" 命令，然后你会在 kern/trap 目录中找到 vector.S）
+        *     你可以使用 "extern uintptr_t __vectors[];" 来定义这个外部变量，它将在后面使用。
+        * (2) 现在你应该在中断描述表 (IDT) 中设置 ISR 的条目。
+        *     你能在这个文件中看到 idt[256] 吗？是的，那就是 IDT！你可以使用 SETGATE 宏来设置 IDT 的每一项。
+        * (3) 在设置完 IDT 的内容后，你需要使用 'lidt' 指令让 CPU 知道 IDT 的位置。
+        *     你不知道这条指令的含义？那就去谷歌一下吧！并查看 libs/x86.h 了解更多信息。
+        *     注意：lidt 的参数是 idt_pd。试着找到它！
+        */
     extern void __alltraps(void);
     /* Set sup0 scratch register to 0, indicating to exception vector
        that we are presently executing in the kernel */

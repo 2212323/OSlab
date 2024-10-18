@@ -55,10 +55,10 @@
  *               (5.2) reset the fields of pages, such as p->ref, p->flags (PageProperty)
  *               (5.3) try to merge low addr or high addr blocks. Notice: should change some pages's p->property correctly.
  */
-free_area_t free_area;
+free_area_t free_areaB;
 
-#define free_list (free_area.free_list)
-#define nr_free (free_area.nr_free)
+#define free_list (free_areaB.free_list)
+#define nr_free (free_areaB.nr_free)
 
 static void
 best_fit_init(void) {
@@ -209,7 +209,7 @@ basic_check(void) {
 
     assert(alloc_page() == NULL);
 
-    free_page(p0);
+    free_page(p0);//就在这里！！！！！
     free_page(p1);
     free_page(p2);
     assert(nr_free == 3);

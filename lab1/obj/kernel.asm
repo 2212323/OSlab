@@ -23,19 +23,19 @@ void grade_backtrace(void);
 
 int kern_init(void) {
     extern char edata[], end[];
-    memset(edata, 0, end - edata);
+    memset(edata, 0, end - edata);  //
     8020000a:	00004517          	auipc	a0,0x4
     8020000e:	00650513          	addi	a0,a0,6 # 80204010 <ticks>
     80200012:	00004617          	auipc	a2,0x4
     80200016:	01660613          	addi	a2,a2,22 # 80204028 <end>
 int kern_init(void) {
     8020001a:	1141                	addi	sp,sp,-16
-    memset(edata, 0, end - edata);
+    memset(edata, 0, end - edata);  //
     8020001c:	8e09                	sub	a2,a2,a0
     8020001e:	4581                	li	a1,0
 int kern_init(void) {
     80200020:	e406                	sd	ra,8(sp)
-    memset(edata, 0, end - edata);
+    memset(edata, 0, end - edata);  //
     80200022:	1cd000ef          	jal	ra,802009ee <memset>
 
     cons_init();  // init the console
@@ -54,7 +54,7 @@ int kern_init(void) {
 
     // grade_backtrace();
 
-    idt_init();  // init interrupt descriptor table
+    idt_init();  // init interrupt descriptor table //初始化中断描述符表
     80200042:	13e000ef          	jal	ra,80200180 <idt_init>
 
     // rdtime in mbare mode crashes

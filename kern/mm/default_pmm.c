@@ -99,19 +99,24 @@
  *               (5.2) 重置页的字段，例如 p->ref, p->flags（PageProperty）
  *               (5.3) 尝试合并低地址或高地址块。注意：应该正确更改一些页的 p->property。
  */
-free_area_t free_area;
 
-#define free_list (free_area.free_list)
+free_area_t free_area;//定义一个全局变量 free_area，用于管理空闲页
+
+//这些宏定义简化了对 free_area 结构体成员的访问
+#define free_list (free_area.free_list) 
 #define nr_free (free_area.nr_free)
 
-static void
-default_init(void) {
-    list_init(&free_list);
-    nr_free = 0;
+//初始化 free_area 结构体
+static void default_init(void) {
+    //初始化自由内存块链表和自由内存块计数器：
+    list_init(&free_list); //初始化空闲页链表
+    nr_free = 0;       //空闲页数量为0
 }
 
+//初始化一个自由内存块，并将其添加到自由内存块链表中
 static void
 default_init_memmap(struct Page *base, size_t n) {
+    
     assert(n > 0);
     struct Page *p = base;
     for (; p != base + n; p ++) {
@@ -138,6 +143,8 @@ default_init_memmap(struct Page *base, size_t n) {
     }
 }
 
+
+//分配 n 个连续的物理页
 static struct Page *
 default_alloc_pages(size_t n) {
     assert(n > 0);
@@ -168,6 +175,7 @@ default_alloc_pages(size_t n) {
     return page;
 }
 
+//释放 n 个连续的物理页
 static void
 default_free_pages(struct Page *base, size_t n) {
     assert(n > 0);
@@ -218,11 +226,15 @@ default_free_pages(struct Page *base, size_t n) {
     }
 }
 
+
+//返回空闲页的数量
 static size_t
 default_nr_free_pages(void) {
     return nr_free;
 }
 
+
+//检查空闲页管理器的正确性
 static void
 basic_check(void) {
     struct Page *p0, *p1, *p2;

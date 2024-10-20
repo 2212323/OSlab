@@ -10,6 +10,39 @@
 #### 练习0：填写已有实验
 
 本实验依赖实验1。请把你做的实验1的代码填入本实验中代码中有“LAB1”的注释相应部分并按照实验手册进行进一步的修改。具体来说，就是跟着实验手册的教程一步步做，然后完成教程后继续完成完成exercise部分的剩余练习。
+```CPP
+    /* (1) Where are the entry addrs of each Interrupt Service Routine (ISR)?
+     *     All ISR's entry addrs are stored in __vectors. where is uintptr_t
+     * __vectors[] ?
+     *     __vectors[] is in kern/trap/vector.S which is produced by
+     * tools/vector.c
+     *     (try "make" command in lab1, then you will find vector.S in kern/trap
+     * DIR)
+     *     You can use  "extern uintptr_t __vectors[];" to define this extern
+     * variable which will be used later.
+     * (2) Now you should setup the entries of ISR in Interrupt Description
+     * Table (IDT).
+     *     Can you see idt[256] in this file? Yes, it's IDT! you can use SETGATE
+     * macro to setup each item of IDT
+     * (3) After setup the contents of IDT, you will let CPU know where is the
+     * IDT by using 'lidt' instruction.
+     *     You don't know the meaning of this instruction? just google it! and
+     * check the libs/x86.h to know more.
+     *     Notice: the argument of lidt is idt_pd. try to find it!
+     */
+        /* (1) 每个中断服务例程 (ISR) 的入口地址在哪里？
+        *     所有 ISR 的入口地址都存储在 __vectors 中。uintptr_t __vectors[] 在哪里？
+        *     __vectors[] 在 kern/trap/vector.S 中，它是由 tools/vector.c 生成的
+        *     （在 lab1 中尝试使用 "make" 命令，然后你会在 kern/trap 目录中找到 vector.S）？？？根本没有vector.S文件！！！
+        *     你可以使用 "extern uintptr_t __vectors[];" 来定义这个外部变量，它将在后面使用。
+        * (2) 现在你应该在中断描述表 (IDT) 中设置 ISR 的条目。
+        *     你能在这个文件中看到 idt[256] 吗？是的，那就是 IDT！你可以使用 SETGATE 宏来设置 IDT 的每一项。
+        * (3) 在设置完 IDT 的内容后，你需要使用 'lidt' 指令让 CPU 知道 IDT 的位置。
+        *     你不知道这条指令的含义？那就去谷歌一下吧！并查看 libs/x86.h 了解更多信息。
+        *     注意：lidt 的参数是 idt_pd。试着找到它！
+        */
+```
+**可是我现在找不到kern/trap/vector.S**wjj
 
 #### 练习1：理解first-fit 连续物理内存分配算法（思考题）
 first-fit 连续物理内存分配算法作为物理内存分配一个很基础的方法，需要同学们理解它的实现过程。请大家仔细阅读实验手册的教程并结合`kern/mm/default_pmm.c`中的相关代码，认真分析default_init，default_init_memmap，default_alloc_pages， default_free_pages等相关函数，并描述程序在进行物理内存分配的过程以及各个函数的作用。

@@ -46,7 +46,7 @@ void idt_init(void) {
         /* (1) 每个中断服务例程 (ISR) 的入口地址在哪里？
         *     所有 ISR 的入口地址都存储在 __vectors 中。uintptr_t __vectors[] 在哪里？
         *     __vectors[] 在 kern/trap/vector.S 中，它是由 tools/vector.c 生成的
-        *     （在 lab1 中尝试使用 "make" 命令，然后你会在 kern/trap 目录中找到 vector.S）
+        *     （在 lab1 中尝试使用 "make" 命令，然后你会在 kern/trap 目录中找到 vector.S）？？？根本没有vector.S文件！！！
         *     你可以使用 "extern uintptr_t __vectors[];" 来定义这个外部变量，它将在后面使用。
         * (2) 现在你应该在中断描述表 (IDT) 中设置 ISR 的条目。
         *     你能在这个文件中看到 idt[256] 吗？是的，那就是 IDT！你可以使用 SETGATE 宏来设置 IDT 的每一项。

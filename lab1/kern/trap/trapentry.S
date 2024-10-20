@@ -106,7 +106,7 @@
 .align(2)
 __alltraps:
     SAVE_ALL
-
+ 
     move  a0, sp
     jal trap
     # sp should be the same as before "jal trap"

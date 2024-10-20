@@ -171,7 +171,7 @@ void exception_handler(struct trapframe *tf) {
              *(2)输出异常指令地址
              *(3)更新 tf->epc寄存器
             */
-           cprintf("breakpoint???");
+           cprintf("breakpoint???\n");
            cprintf("epc = %p\n", (void *)tf->epc);
            tf->epc+=4;
             break;

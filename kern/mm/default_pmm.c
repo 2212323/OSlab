@@ -53,8 +53,54 @@
  *               (5.2) reset the fields of pages, such as p->ref, p->flags (PageProperty)
  *               (5.3) try to merge low addr or high addr blocks. Notice: should change some pages's p->property correctly.
  */
-free_area_t free_area_default;  //定义一个全局变量 free_area，用于管理空闲页
+/* 在首次适应算法中，分配器维护一个空闲块列表（称为空闲列表），
+   在收到内存请求时，沿着列表扫描第一个足够大的块来满足请求。
+   如果选择的块明显大于请求的块，则通常会将其拆分，并将剩余部分作为另一个空闲块添加到列表中。
+   请参阅严蔚敏的中文书《数据结构——C语言版》第196~198页，第8.2节
+*/
+// 你应该重写以下函数：default_init, default_init_memmap, default_alloc_pages, default_free_pages.
+/*
+ * FFMA 的详细信息
+ * (1) 准备：为了实现首次适应内存分配（FFMA），我们应该使用一些列表来管理空闲内存块。
+ *              struct free_area_t 用于管理空闲内存块。首先你应该熟悉 list.h 中的 struct list。
+ *              struct list 是一个简单的双向链表实现。你应该知道如何使用：list_init, list_add(list_add_after), list_add_before, list_del, list_next, list_prev。
+ *              另一个巧妙的方法是将通用的 list 结构转换为特定的结构（例如 struct page）：
+ *              你可以找到一些宏：le2page（在 memlayout.h 中），（在未来的实验中：le2vma（在 vmm.h 中），le2proc（在 proc.h 中）等）。
+ * (2) default_init：你可以重用示例 default_init 函数来初始化 free_list 并将 nr_free 设置为 0。
+ *              free_list 用于记录空闲内存块。nr_free 是空闲内存块的总数。
+ * (3) default_init_memmap：调用图：kern_init --> pmm_init --> page_init --> init_memmap --> pmm_manager->init_memmap
+ *              这个函数用于初始化一个空闲块（参数：addr_base, page_number）。
+ *              首先你应该初始化这个空闲块中的每一页（在 memlayout.h 中），包括：
+ *                  p->flags 应该设置 PG_property 位（表示此页有效。在 pmm_init 函数中（在 pmm.c 中），
+ *                  PG_reserved 位已在 p->flags 中设置）
+ *                  如果此页是空闲的且不是空闲块的第一页，p->property 应该设置为 0。
+ *                  如果此页是空闲的且是空闲块的第一页，p->property 应该设置为块的总数。
+ *                  p->ref 应该为 0，因为现在 p 是空闲的，没有引用。
+ *                  我们可以使用 p->page_link 将此页链接到 free_list，（例如：list_add_before(&free_list, &(p->page_link));）
+ *              最后，我们应该累加空闲内存块的数量：nr_free += n
+ * (4) default_alloc_pages：在空闲列表中搜索第一个空闲块（块大小 >= n），调整空闲块的大小，返回分配块的地址。
+ *              (4.1) 所以你应该像这样搜索空闲列表：
+ *                       list_entry_t le = &free_list;
+ *                       while((le = list_next(le)) != &free_list) {
+ *                       ....
+ *                 (4.1.1) 在 while 循环中，获取 struct page 并检查 p->property（记录空闲块的数量）是否 >= n？
+ *                       struct Page *p = le2page(le, page_link);
+ *                       if (p->property >= n) { ...
+ *                 (4.1.2) 如果我们找到了这个 p，那么这意味着我们找到了一个空闲块（块大小 >= n），并且可以分配前 n 页。
+ *                     这个页的一些标志位应该设置：PG_reserved = 1, PG_property = 0
+ *                     从 free_list 中取消链接这些页
+ *                     (4.1.2.1) 如果 (p->property > n)，我们应该重新计算这个空闲块剩余的数量，
+ *                           （例如：le2page(le, page_link)->property = p->property - n;）
+ *                 (4.1.3) 重新计算 nr_free（所有空闲块的剩余数量）
+ *                 (4.1.4) 返回 p
+ *               (4.2) 如果我们找不到一个空闲块（块大小 >= n），则返回 NULL
+ * (5) default_free_pages：将页重新链接到空闲列表中，可能将小的空闲块合并成大的空闲块。
+ *               (5.1) 根据撤回块的基地址，搜索空闲列表，找到正确的位置（从低地址到高地址），并插入这些页。（可以使用 list_next, le2page, list_add_before）
+ *               (5.2) 重置页的字段，例如 p->ref, p->flags（PageProperty）
+ *               (5.3) 尝试合并低地址或高地址块。注意：应该正确更改一些页的 p->property。
+ */
 
+free_area_t free_area;//定义一个全局变量 free_area，用于管理空闲页
 
 //这些宏定义简化了对 free_area 结构体成员的访问
 #define free_list (free_area_default.free_list) 

@@ -55,10 +55,10 @@
  *               (5.2) reset the fields of pages, such as p->ref, p->flags (PageProperty)
  *               (5.3) try to merge low addr or high addr blocks. Notice: should change some pages's p->property correctly.
  */
-free_area_t free_areaB;
+free_area_t free_area;
 
-#define free_list (free_areaB.free_list)
-#define nr_free (free_areaB.nr_free)
+#define free_list (free_area.free_list)
+#define nr_free (free_area.nr_free)
 
 static void
 best_fit_init(void) {
@@ -66,6 +66,8 @@ best_fit_init(void) {
     nr_free = 0;
 }
 
+
+//初始化自由内存块链表和自由内存块计数器
 static void
 best_fit_init_memmap(struct Page *base, size_t n) {
     assert(n > 0);
@@ -93,6 +95,8 @@ best_fit_init_memmap(struct Page *base, size_t n) {
     }
 }
 
+
+//分配n个连续的页框
 static struct Page *
 best_fit_alloc_pages(size_t n) {
     assert(n > 0);
@@ -129,6 +133,8 @@ best_fit_alloc_pages(size_t n) {
     return page;
 }
 
+
+//释放n个连续的页框
 static void
 best_fit_free_pages(struct Page *base, size_t n) {
     assert(n > 0);
@@ -180,11 +186,14 @@ best_fit_free_pages(struct Page *base, size_t n) {
     }
 }
 
+
+//返回空闲页块的数量
 static size_t
 best_fit_nr_free_pages(void) {
     return nr_free;
 }
 
+//检查空闲页块的合法性
 static void
 basic_check(void) {
     struct Page *p0, *p1, *p2;

@@ -16,29 +16,32 @@
 // pmm_manager 是一个物理内存管理类。一个特殊的 pmm 管理器 - XXX_pmm_manager
 // 只需要实现 pmm_manager 类中的方法，然后 XXX_pmm_manager 就可以被 ucore 用来管理整个物理内存空间。
 struct pmm_manager {
-    const char *name;  // XXX_pmm_manager's name
-                       // XXX_pmm_manager 的名字
-    void (*init)(
+    const char *name;  // XXX_pmm_manager's name 
+                        //XXX_pmm_manager 的名字
+                       
+    void (*init)(// 初始化 XXX_pmm_manager 的内部描述和管理数据结构（空闲块列表，空闲块数量）
         void);  // initialize internal description&management data structure
                 // (free block list, number of free block) of XXX_pmm_manager
-                // 初始化 XXX_pmm_manager 的内部描述和管理数据结构（空闲块列表，空闲块数量）
-    void (*init_memmap)(
+                
+                
+    void (*init_memmap)(// 根据初始的空闲物理内存空间设置描述和管理数据结构
         struct Page *base,
         size_t n);  // setup description&management data structcure according to
                     // the initial free physical memory space
-                    // 根据初始的空闲物理内存空间设置描述和管理数据结构
-    struct Page *(*alloc_pages)(
+                    
+    struct Page *(*alloc_pages)(// 分配 >=n 页，取决于分配算法
         size_t n);  // allocate >=n pages, depend on the allocation algorithm
-                    // 分配 >=n 页，取决于分配算法
-    void (*free_pages)(struct Page *base, size_t n);  // free >=n pages with
+                    
+    void (*free_pages)(struct Page *base, size_t n);  // 释放 >=n 页，基于 Page 描述符结构（memlayout.h）的 "base" 地址
+                                                      // free >=n pages with
                                                       // "base" addr of Page
                                                       // descriptor
                                                       // structures(memlayout.h)
-                                                      // 释放 >=n 页，基于 Page 描述符结构（memlayout.h）的 "base" 地址
-    size_t (*nr_free_pages)(void);  // return the number of free pages
-                                    // 返回空闲页的数量
-    void (*check)(void);            // check the correctness of XXX_pmm_manager
-                                    // 检查 XXX_pmm_manager 的正确性
+                                                      
+    size_t (*nr_free_pages)(void);  // return the number of free pages 返回空闲页的数量
+                                    // 
+    void (*check)(void);            // check the correctness of XXX_pmm_manager 检查 XXX_pmm_manager 的正确性
+                                    // 
 };
 
 extern const struct pmm_manager *pmm_manager;

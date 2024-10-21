@@ -16,6 +16,9 @@
 
 // virtual address of physical page array
 // 物理页数组的虚拟地址
+// pages指针保存的是第一个Page结构体所在的位置，也可以认为是Page结构体组成的数组的开头
+// 由于C语言的特性，可以把pages作为数组名使用，pages[i]表示顺序排列的第i个结构体
+
 struct Page *pages;
 // amount of physical memory (in pages)
 // 物理内存的数量（以页为单位）

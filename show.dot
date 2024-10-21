@@ -1,0 +1,26 @@
+digraph G {
+    "pmm_init 初始化" -> "init_pmm_manager 初始化内存管理器";
+    "pmm_init 初始化" -> "page_init 页面初始化";
+    "pmm_init 初始化" -> "check_alloc_page 检查分配页面";
+
+    "init_pmm_manager 初始化内存管理器" -> "pmm_manager->init 内存管理器初始化";
+
+    "page_init 页面初始化" -> "init_memmap 初始化内存映射";
+    "init_memmap 初始化内存映射" -> "pmm_manager->init_memmap 内存管理器初始化内存映射";
+
+    "check_alloc_page 检查分配页面" -> "pmm_manager->check 内存管理器检查";
+    "pmm_manager 内存管理器"[shape=box3d, color="#e6add8"];
+    "pmm_manager 内存管理器" -> "pmm_manager->init_memmap 内存管理器初始化内存映射" [arrowhead="dot", color="red"];
+    "pmm_manager 内存管理器" -> "pmm_manager->init 内存管理器初始化" [arrowhead="dot", color="red"];
+    "pmm_manager 内存管理器" -> "pmm_manager->alloc_pages 内存管理器分配页面" [arrowhead="dot", color="red"];
+    "pmm_manager 内存管理器" -> "pmm_manager->free_pages 内存管理器释放页面" [arrowhead="dot", color="red"];
+    "pmm_manager 内存管理器" -> "pmm_manager->nr_free_pages 内存管理器空闲页面数" [arrowhead="dot", color="red"];
+    "pmm_manager 内存管理器" -> "pmm_manager->check 内存管理器检查" [arrowhead="dot", color="red"];
+    "pmm_manager->check 内存管理器检查" -> "alloc_pages 分配页面";
+    "alloc_pages 分配页面" -> "pmm_manager->alloc_pages 内存管理器分配页面"[label="递归"];
+    "pmm_manager->check 内存管理器检查" -> "free_pages 释放页面";
+    "free_pages 释放页面" -> "pmm_manager->free_pages 内存管理器释放页面"[label="递归"];
+    "pmm_manager->check 内存管理器检查" -> "nr_free_pages 空闲页面数";
+    "nr_free_pages 空闲页面数" -> "pmm_manager->nr_free_pages 内存管理器空闲页面数"[label="递归"];
+    //[shape=ellipse, color=lightblue];
+}

@@ -97,7 +97,7 @@
  * (5) default_free_pages：将页重新链接到空闲列表中，可能将小的空闲块合并成大的空闲块。
  *               (5.1) 根据撤回块的基地址，搜索空闲列表，找到正确的位置（从低地址到高地址），并插入这些页。（可以使用 list_next, le2page, list_add_before）
  *               (5.2) 重置页的字段，例如 p->ref, p->flags（PageProperty）
- *               (5.3) 尝试合并低地址或高地址块。注意：应该正确更改一些页的 p->property。
+ *              (5.3) 尝试合并低地址或高地址块。注意：应该正确更改一些页的 p->property。
  */
 
 free_area_t free_area_default;//定义一个全局变量 free_area，用于管理空闲页
@@ -113,7 +113,7 @@ static void default_init(void) {
     nr_free = 0;       //空闲页数量为0
 }
 
-//初始化一个自由内存块，并将其添加到自由内存块链表中
+// 初始化一个自由内存块，并将其添加到自由内存块链表中
 static void
 default_init_memmap(struct Page *base, size_t n) {
     //base：指向内存块的起始地址。
@@ -139,8 +139,8 @@ default_init_memmap(struct Page *base, size_t n) {
             if (base < page) {//如果当前内存块的地址小于链表中的页块地址
                 list_add_before(le, &(base->page_link));
                 break;
-            } else if (list_next(le) == &free_list) {
-                list_add(le, &(base->page_link));
+            } else if (list_next(le) == &free_list) { // 如果到达列表末尾
+                list_add(le, &(base->page_link)); // 将基页添加到列表末尾
             }
         }
     }
@@ -150,32 +150,33 @@ default_init_memmap(struct Page *base, size_t n) {
 //分配 n 个连续的物理页
 static struct Page *
 default_alloc_pages(size_t n) {
-    assert(n > 0);
-    if (n > nr_free) {
+    assert(n > 0); // 确保 n 大于 0
+    if (n > nr_free) { // 如果请求的页数大于空闲页数，返回 NULL
         return NULL;
     }
     struct Page *page = NULL;
     list_entry_t *le = &free_list;
+    // 遍历空闲列表，找到第一个满足条件的空闲块
     while ((le = list_next(le)) != &free_list) {
         struct Page *p = le2page(le, page_link);
-        if (p->property >= n) {
+        if (p->property >= n) { // 找到一个空闲块，其大小大于或等于 n
             page = p;
             break;
         }
     }
     if (page != NULL) {
         list_entry_t* prev = list_prev(&(page->page_link));
-        list_del(&(page->page_link));
-        if (page->property > n) {
+        list_del(&(page->page_link)); // 从空闲列表中删除该块
+        if (page->property > n) { // 如果空闲块大小大于 n
             struct Page *p = page + n;
-            p->property = page->property - n;
-            SetPageProperty(p);
-            list_add(prev, &(p->page_link));
+            p->property = page->property - n; // 更新剩余块的大小
+            SetPageProperty(p); // 设置剩余块的属性
+            list_add(prev, &(p->page_link)); // 将剩余块添加回空闲列表
         }
-        nr_free -= n;
-        ClearPageProperty(page);
+        nr_free -= n; // 更新空闲页数
+        ClearPageProperty(page); // 清除已分配块的属性
     }
-    return page;
+    return page; // 返回分配的页
 }
 
 //释放 n 个连续的物理页

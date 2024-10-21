@@ -31,12 +31,15 @@ typedef uintptr_t pde_t;
  * struct Page - Page descriptor structures. Each Page describes one
  * physical page. In kern/mm/pmm.h, you can find lots of useful functions
  * that convert Page to other data types, such as physical address.
+ *  struct Page - 页描述符结构。每个 Page 描述一个物理页。
+ * 在 kern/mm/pmm.h 中，你可以找到许多将 Page 转换为其他数据类型的有用函数，
+ * 例如物理地址。
  * */
 struct Page {
-    int ref;                        // page frame's reference counter
-    uint64_t flags;                 // array of flags that describe the status of the page frame
-    unsigned int property;          // the num of free block, used in first fit pm manager
-    list_entry_t page_link;         // free list link
+    int ref;                        // page frame's reference counter 页框的引用计数器
+    uint64_t flags;                 // array of flags that describe the status of the page frame 描述页框状态的标志数组
+    unsigned int property;          // the num of free block, used in first fit pm manager 空闲块的数量，用于首次适应内存管理器
+    list_entry_t page_link;         // free list link 空闲列表链接
 };
 
 /* Flags describing the status of a page frame */
@@ -50,14 +53,15 @@ struct Page {
 #define ClearPageProperty(page)     clear_bit(PG_property, &((page)->flags))
 #define PageProperty(page)          test_bit(PG_property, &((page)->flags))
 
-// convert list entry to page
+// convert list entry to page将链表条目转换为页
 #define le2page(le, member)                 \
     to_struct((le), struct Page, member)
 
-/* free_area_t - maintains a doubly linked list to record free (unused) pages */
+/* free_area_t - maintains a doubly linked list to record free (unused) pages 
+    free_area_t - 维护一个双向链表来记录空闲（未使用的）页*/
 typedef struct {
-    list_entry_t free_list;         // the list header
-    unsigned int nr_free;           // number of free pages in this free list
+    list_entry_t free_list;         // the list header 列表头
+    unsigned int nr_free;           // number of free pages in this free list 此空闲列表中的空闲页数
 } free_area_t;
 
 #endif /* !__ASSEMBLER__ */

@@ -100,11 +100,11 @@
  *               (5.3) 尝试合并低地址或高地址块。注意：应该正确更改一些页的 p->property。
  */
 
-free_area_t free_area;//定义一个全局变量 free_area，用于管理空闲页
+free_area_t free_area_default;//定义一个全局变量 free_area，用于管理空闲页
 
 //这些宏定义简化了对 free_area 结构体成员的访问
-#define free_list (free_area.free_list) 
-#define nr_free (free_area.nr_free)
+#define free_list (free_area_default.free_list) 
+#define nr_free (free_area_default.nr_free)
 
 //初始化 free_area 结构体
 static void default_init(void) {

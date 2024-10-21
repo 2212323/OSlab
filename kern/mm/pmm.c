@@ -1,5 +1,6 @@
 #include <default_pmm.h>
 #include <best_fit_pmm.h>
+#include <buddy_pmm.h>
 #include <defs.h>
 #include <error.h>
 #include <memlayout.h>
@@ -48,7 +49,7 @@ static void check_alloc_page(void);
 // init_pmm_manager - initialize a pmm_manager instance
 // init_pmm_manager - 初始化一个 pmm_manager 实例
 static void init_pmm_manager(void) {
-    pmm_manager = &best_fit_pmm_manager;  //初始默认为best，应改为default，因best还没有实现！！！！！！
+    pmm_manager = &buddy_pmm_manager;  //初始默认为best，应改为default，因best还没有实现！！！！！！
     cprintf("memory management: %s\n", pmm_manager->name);
     pmm_manager->init();
 }

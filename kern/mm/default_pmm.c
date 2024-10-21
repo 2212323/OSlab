@@ -116,25 +116,28 @@ static void default_init(void) {
 // 初始化一个自由内存块，并将其添加到自由内存块链表中
 static void
 default_init_memmap(struct Page *base, size_t n) {
-    assert(n > 0); // 确保 n 大于 0
+    //base：指向内存块的起始地址。
+    //n：内存块的页数。
+    assert(n > 0);
     struct Page *p = base;
-    for (; p != base + n; p++) { // 初始化每一页
-        assert(PageReserved(p)); // 确保页是保留的
-        p->flags = p->property = 0; // 清除标志和属性
-        set_page_ref(p, 0); // 设置页引用计数为 0
+    for (; p != base + n; p ++) {//遍历内存块中的每一页
+        assert(PageReserved(p));    //确保每一页都是保留的（即未被使用）。
+        p->flags = p->property = 0; //清空页的标志和属性
+        set_page_ref(p, 0); //设置页的引用计数为0
     }
-    base->property = n; // 设置基页的属性为 n
-    SetPageProperty(base); // 设置基页的属性标志
-    nr_free += n; // 增加空闲页的数量
-    if (list_empty(&free_list)) { // 如果空闲列表为空
-        list_add(&free_list, &(base->page_link)); // 将基页添加到空闲列表
+    base->property = n; //将内存块的属性设置为页数 n。
+    SetPageProperty(base);  //设置内存块的属性标志，表示这是一个有效的内存块
+    nr_free += n;   //增加自由内存块的总数
+
+    if (list_empty(&free_list)) {//如果空闲页链表为空
+        list_add(&free_list, &(base->page_link));
     } else {
+        //如果链表不为空，找到合适的位置插入内存块。
         list_entry_t* le = &free_list;
-        // 
-        while ((le = list_next(le)) != &free_list) { // 遍历空闲列表
+        while ((le = list_next(le)) != &free_list) {//遍历空闲页链表
             struct Page* page = le2page(le, page_link);
-            if (base < page) { // 找到合适的位置插入基页
-                list_add_before(le, &(base->page_link)); // 在找到的位置之前插入基页
+            if (base < page) {//如果当前内存块的地址小于链表中的页块地址
+                list_add_before(le, &(base->page_link));
                 break;
             } else if (list_next(le) == &free_list) { // 如果到达列表末尾
                 list_add(le, &(base->page_link)); // 将基页添加到列表末尾

@@ -39,3 +39,4 @@ bin/
 secret-config.json
 .qemu.out
 .score
+.gdb.in

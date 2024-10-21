@@ -88,13 +88,16 @@ static void
 default_init_memmap(struct Page *base, size_t n) {
     assert(n > 0); // 确保 n 大于 0
     struct Page *p = base;
-    for (; p != base + n; p++) { // 初始化每一页
-        assert(PageReserved(p)); // 确保页是保留的
-        p->flags = p->property = 0; // 清除标志和属性
-        set_page_ref(p, 0); // 设置页引用计数为 0
+    //初始化每一页
+    for (; p != base + n; p++) { 
+        assert(PageReserved(p)); 
+        p->flags = p->property = 0; 
+        set_page_ref(p, 0); 
     }
-    base->property = n; // 设置基页的属性为 n
-    SetPageProperty(base); // 设置基页的属性标志
+    //处理基页
+    base->property = n; 
+    SetPageProperty(base); 
+
     nr_free += n; // 增加空闲页的数量
     if (list_empty(&free_list)) { // 如果空闲列表为空
         list_add(&free_list, &(base->page_link)); // 将基页添加到空闲列表
@@ -112,6 +115,147 @@ default_init_memmap(struct Page *base, size_t n) {
     }
 }
 
+```
+首先对页进行操作，页的定义在kern/mm/memlayout.h中：
+```cpp
+struct Page {
+    int ref;                        // page frame's reference counter 页框的引用计数器
+    uint64_t flags;                 // array of flags that describe the status of the page frame 描述页框状态的标志数组
+    unsigned int property;          // the num of free block, used in first fit pm manager 空闲块的数量，用于首次适应内存管理器
+    list_entry_t page_link;         // free list link 空闲列表链接
+};
+
+```
+代码在简单的判断n>0之后，开始清理每个页。需要注意的是，这里面的p++:
+```cpp
+    assert(n > 0); // 确保 n 大于 0
+    struct Page *p = base;
+    //初始化每一页
+    for (; p != base + n; p++) { //注意p++
+        assert(PageReserved(p)); 
+        p->flags = p->property = 0; 
+        set_page_ref(p, 0); 
+    }
+
+```
+
+`p` 是一个指向 `struct Page` 的指针，`p++` 操作将使指针 `p` 指向下一个 `struct Page` 结构体。当对结构体指针进行自增操作（`p++`），这并不是简单的增加一个字节，而是会跳过整个结构体的大小。也就是说，`p++` 会使指针 `p` 增加相当于 `struct Page` 结构体大小的字节数，指向内存中的下一个 `struct Page` 实例。每次 `p++` 实际上是在内存中跳过 `sizeof(struct Page)` 个字节，并指向下一个 `struct Page` 结构体。这样就可以在循环中逐一处理内存块中的每一页。
+
+其中`static inline void set_page_ref(struct Page *page, int val) { page->ref = val; }`是一个kern/mm/pmm.h的内联函数，可以看到三行代码将页的引用计数器，状态数组和空闲块数量都置0了。
+
+
+```cpp
+    //处理基页
+    base->property = n; 
+    SetPageProperty(base); 
+     nr_free += n; // 增加空闲页的数量
+```
+对于基页也就是第一页，把空闲块数量置n,然后采用宏定义的方式设置他的状态数组，证明此页是一个空闲内存块的头页（包含一些连续地址的页），可以在 alloc_pages 中使用。之后对应的增加空闲页的数量。
+
+```cpp
+    //插入页
+    if (list_empty(&free_list)) { // 如果空闲列表为空
+        list_add(&free_list, &(base->page_link)); // 将基页添加到空闲列表
+    } else {
+        list_entry_t* le = &free_list;
+        while ((le = list_next(le)) != &free_list) { // 遍历空闲列表
+            struct Page* page = le2page(le, page_link);
+            if (base < page) { // 找到合适的位置插入基页
+                list_add_before(le, &(base->page_link)); // 在找到的位置之前插入基页
+                break;
+            } else if (list_next(le) == &free_list) { // 如果到达列表末尾
+                list_add(le, &(base->page_link)); // 将基页添加到列表末尾
+            }
+        }
+    }
+
+```
+在最后就是一个插入页的过程，利用libs/list.h中对链表的操作，在空链表的时候直接加入，不空的话顺序遍历，找到可以的区域进行插入。
+##### 函数使用
+在kern/mm/best_fit_pmm.c中将default_memmap()的函数指针赋给了init，然后在/kern/mm/pmm.c中的page_init()的函数中用已经赋过值的结构体指针直接调用了这一成员函数:
+
+
+```cpp
+    if (freemem < mem_end) {
+        //初始化我们可以自由使用的物理内存
+        init_memmap(pa2page(mem_begin), (mem_end - mem_begin) / PGSIZE);
+    }
+```
+这里面传入的参数是可以自由使用的物理内存的起始页面和可用的大小，进行空间的初始化。
+#### default_alloc_pages()
+##### 函数内容
+
+```cpp
+//释放 n 个连续的物理页
+static void
+default_free_pages(struct Page *base, size_t n) {
+    assert(n > 0);
+    struct Page *p = base;
+    for (; p != base + n; p ++) {
+        assert(!PageReserved(p) && !PageProperty(p));
+        p->flags = 0;
+        set_page_ref(p, 0);
+    }
+    base->property = n;
+    SetPageProperty(base);
+    nr_free += n;
+
+    if (list_empty(&free_list)) {
+        list_add(&free_list, &(base->page_link));
+    } else {
+        list_entry_t* le = &free_list;
+        while ((le = list_next(le)) != &free_list) {
+            struct Page* page = le2page(le, page_link);
+            if (base < page) {
+                list_add_before(le, &(base->page_link));
+                break;
+            } else if (list_next(le) == &free_list) {
+                list_add(le, &(base->page_link));
+            }
+        }
+    }
+
+    list_entry_t* le = list_prev(&(base->page_link));
+    if (le != &free_list) {
+        p = le2page(le, page_link);
+        if (p + p->property == base) {
+            p->property += base->property;
+            ClearPageProperty(base);
+            list_del(&(base->page_link));
+            base = p;
+        }
+    }
+
+    le = list_next(&(base->page_link));
+    if (le != &free_list) {
+        p = le2page(le, page_link);
+        if (base + base->property == p) {
+            base->property += p->property;
+            ClearPageProperty(p);
+            list_del(&(p->page_link));
+        }
+    }
+}
+
+```
+```cpp
+```
+```cpp
+```
+```cpp
+```
+
+
+```cpp
+```
+
+```cpp
+```
+```cpp
+```
+```cpp
+```
+```cpp
 ```
 
 这一部分的代码

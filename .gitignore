@@ -37,3 +37,5 @@ bin/
 
 # 忽略特定文件
 secret-config.json
+.qemu.out
+.score

@@ -113,31 +113,31 @@ static void default_init(void) {
     nr_free = 0;       //空闲页数量为0
 }
 
-//初始化一个自由内存块，并将其添加到自由内存块链表中
+// 初始化一个自由内存块，并将其添加到自由内存块链表中
 static void
 default_init_memmap(struct Page *base, size_t n) {
-    
-    assert(n > 0);
+    assert(n > 0); // 确保 n 大于 0
     struct Page *p = base;
-    for (; p != base + n; p ++) {
-        assert(PageReserved(p));
-        p->flags = p->property = 0;
-        set_page_ref(p, 0);
+    for (; p != base + n; p++) { // 初始化每一页
+        assert(PageReserved(p)); // 确保页是保留的
+        p->flags = p->property = 0; // 清除标志和属性
+        set_page_ref(p, 0); // 设置页引用计数为 0
     }
-    base->property = n;
-    SetPageProperty(base);
-    nr_free += n;
-    if (list_empty(&free_list)) {
-        list_add(&free_list, &(base->page_link));
+    base->property = n; // 设置基页的属性为 n
+    SetPageProperty(base); // 设置基页的属性标志
+    nr_free += n; // 增加空闲页的数量
+    if (list_empty(&free_list)) { // 如果空闲列表为空
+        list_add(&free_list, &(base->page_link)); // 将基页添加到空闲列表
     } else {
         list_entry_t* le = &free_list;
-        while ((le = list_next(le)) != &free_list) {
+        // 
+        while ((le = list_next(le)) != &free_list) { // 遍历空闲列表
             struct Page* page = le2page(le, page_link);
-            if (base < page) {
-                list_add_before(le, &(base->page_link));
+            if (base < page) { // 找到合适的位置插入基页
+                list_add_before(le, &(base->page_link)); // 在找到的位置之前插入基页
                 break;
-            } else if (list_next(le) == &free_list) {
-                list_add(le, &(base->page_link));
+            } else if (list_next(le) == &free_list) { // 如果到达列表末尾
+                list_add(le, &(base->page_link)); // 将基页添加到列表末尾
             }
         }
     }

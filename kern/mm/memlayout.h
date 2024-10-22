@@ -64,6 +64,12 @@ typedef struct {
     unsigned int nr_free;           // number of free pages in this free list 此空闲列表中的空闲页数
 } free_area_t;
 
+typedef struct  {// buddy系统结构
+  unsigned size;// buddy系统大小
+  unsigned longest[1]; // 最大可用块大小
+}buddy2;
+
+
 #endif /* !__ASSEMBLER__ */
 
 #endif /* !__KERN_MM_MEMLAYOUT_H__ */

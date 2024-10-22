@@ -297,7 +297,7 @@ default_check(void) {
     int count = 0, total = 0;
     list_entry_t *le = &free_list;
     while ((le = list_next(le)) != &free_list) {
-        struct Page *p = le2page(le, page_link);
+        struct Page *p = le2page(le, page_link);    
         assert(PageProperty(p));
         count ++, total += p->property;
     }

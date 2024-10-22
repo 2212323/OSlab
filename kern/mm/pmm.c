@@ -49,7 +49,7 @@ static void check_alloc_page(void);
 // init_pmm_manager - initialize a pmm_manager instance
 // init_pmm_manager - 初始化一个 pmm_manager 实例
 static void init_pmm_manager(void) {
-    pmm_manager = &buddy_pmm_manager;  //初始默认为best，应改为default，因best还没有实现！！！！！！
+    pmm_manager = &default_pmm_manager;  //初始默认为best，应改为default，因best还没有实现！！！！！！
     cprintf("memory management: %s\n", pmm_manager->name);
     pmm_manager->init();
 }
@@ -100,7 +100,7 @@ size_t nr_free_pages(void) {
 
 //初始化物理内存管理系统。它设置了内核和用户程序可以使用的物理内存区域，并将这些区域标记为可用
 static void page_init(void) {
-    va_pa_offset = PHYSICAL_MEMORY_OFFSET;
+    va_pa_offset = PHYSICAL_MEMORY_OFFSET;//这是设置虚拟地址到物理地址的偏移量。在启用虚拟内存的系统中，虚拟地址和物理地址之间有一个固定的偏移量，通常由系统定义。在我们的系统中，这个偏移量是0xFFFFFFFF40000000。
 
     uint64_t mem_begin = KERNEL_BEGIN_PADDR; //#define KERNEL_BEGIN_PADDR     0x80200000    应用程序的第一条指令   硬编码取代 sbi_query_memory()接口，内核的起始地址
     uint64_t mem_size = PHYSICAL_MEMORY_END - KERNEL_BEGIN_PADDR;//内核的大小
@@ -121,7 +121,7 @@ static void page_init(void) {
     npage = maxpa / PGSIZE;
     //kernel在end[]结束, pages是剩下的页的开始
     // 内核在 end[] 结束，pages 是剩下的页的开始
-    pages = (struct Page *)ROUNDUP((void *)end, PGSIZE);
+    pages = (struct Page *)ROUNDUP((void *)end, PGSIZE);//pages：指向内核结束后的第一个可用页面。通过 ROUNDUP 来确保对齐到页大小。
     //把pages指针指向内核所占内存空间结束后的第一页
 
     //一开始把所有页面都设置为保留给内核使用的，之后再设置哪些页面可以分配给其他程序

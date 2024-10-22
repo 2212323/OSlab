@@ -4,7 +4,7 @@
 #include <stdio.h>
 #include <assert.h>
 #include <memlayout.h>
-
+#include <assert.h>
 #define LEFT_LEAF(index) ((index) * 2 + 1)
 #define RIGHT_LEAF(index) ((index) * 2 + 2)
 #define PARENT(index) ( ((index) + 1) / 2 - 1)
@@ -18,6 +18,7 @@
 #define PAGE_COUNT 16384
 // 修正大小为2的幂
 static unsigned fixsize(unsigned size) {
+  //TODO
   size |= size >> 1;
   size |= size >> 2;
   size |= size >> 4;
@@ -26,48 +27,78 @@ static unsigned fixsize(unsigned size) {
   return size+1;
 }
 buddy2* self;
+buddy2 buddy;
 struct Page* unsigned2page(unsigned i){
   //TODO
-    return &pages[i];
+  //OK
+    struct Page* p= self->base+i;
+    return p;
 }
 unsigned page2unsigned(struct Page* p){
   //TODO
-    return p-pages;
+  //OK
+    return (p-self->base);
 }
 // 创建一个新的buddy系统
 // 参数: size - buddy系统的大小，必须是2的幂
 // 返回值: 成功返回buddy系统的指针，失败返回NULL
-struct buddy2* buddy2_new() {
-  int size=PAGE_COUNT;
-  //struct buddy2* self;
+void buddy2_init()
+{
+  self=&buddy;
+  cprintf("buddy2_init start\n");
+  self->size=0;
+  self->longest[0]=0;
+  
+}
+void buddy2_new(struct  Page* base, size_t size) {
+  size=PAGE_COUNT;
+  self->base=base;
+  assert(size > 0);
+  struct Page *p = base;
+  //清理内存块中的每一页
+  for (; p != base + size; p ++) {
+      assert(PageReserved(p));    //确保每一页都是保留的（即未被使用）。
+      p->flags = p->property = 0; //清空页的标志和属性
+      set_page_ref(p, 0); //设置页的引用计数为0
+  }
+  //处理内存块的第一页
+  base->property = size; //将内存块的属性设置为页数 n。
+  SetPageProperty(base);  //设置内存块的属性标志，表示这是一个有效的内存块
+
+  //将内存块添加到空闲页完全二叉树中
+
   unsigned node_size;
   int i;
 
-  if (size < 1 || !IS_POWER_OF_2(size))
-    return NULL;
+  // if (size < 1 || !IS_POWER_OF_2(size))
+  //   return NULL;
 
-  self = (struct buddy2*)ALLOC(2 * size * sizeof(unsigned));
-  self->size = size;
-  node_size = size * 2;
-
+  //self = (struct buddy2*)ALLOC(2 * size * sizeof(unsigned));//分配二叉树的空间
+  self->size += size;//设置buddy系统的大小
+  node_size = size * 2;//设置节点大小
+ //初始化buddy系统的最大可用块大小，开机
   for (i = 0; i < 2 * size - 1; ++i) {
     if (IS_POWER_OF_2(i+1))
       node_size /= 2;
-    self->longest[i] = node_size;
+    self->longest[i] = node_size;//longest[i]代表的就是第i个节点的最大可用块大小
+                                 //也就是以以这个节点为根节点的子树中最大的可用块大小
+                                 //8 44 2222 11111111
   }
-  return self;
+
+
+  cprintf("buddy2_new end\n");
 }
 
 // 分配内存块
 // 参数: self - buddy系统的指针, size - 要分配的内存块大小
 // 返回值: 成功返回内存块的偏移量，失败返回-1
-int buddy2_alloc(int size) {
+struct Page* buddy2_alloc(size_t size) {
   unsigned index = 0; // 初始化索引为0
   unsigned node_size; // 节点大小
   unsigned offset = 0; // 偏移量
 
   if (self == NULL) // 如果buddy系统指针为空
-    return -1; // 返回-1表示失败
+    return NULL; // 返回-1表示失败
 
   if (size <= 0) // 如果请求的大小小于等于0
     size = 1; // 将大小设为1
@@ -75,7 +106,7 @@ int buddy2_alloc(int size) {
     size = fixsize(size); // 调整大小为2的幂
 
   if (self->longest[index] < size) // 如果根节点的最大可用块小于请求的大小
-    return -1; // 返回-1表示失败
+    return NULL; // 返回-1表示失败
 
   // 遍历树找到合适的块
   for (node_size = self->size; node_size != size; node_size /= 2) {
@@ -95,39 +126,51 @@ int buddy2_alloc(int size) {
       MAX(self->longest[LEFT_LEAF(index)], self->longest[RIGHT_LEAF(index)]); // 更新父节点的最大可用块大小
   }
 
-  return offset; // 返回偏移量
+  struct Page* p=unsigned2page(offset);
+  ClearPageProperty(p); // 清除真实物理内存已分配块的属性
+  self->size -= size; // 更新buddy系统的大小
+  return p; // 返回偏移量
 }
 
 // 释放内存块
 // 参数: self - buddy系统的指针, offset - 要释放的内存块的偏移量
-void buddy2_free( int offset) {
+// 释放内存块
+// 参数: Freebase - 要释放的内存块的基地址, n - 要释放的内存块大小
+static void buddy2_free(struct Page *Freebase,size_t NoUse) {
+  int offset = page2unsigned(Freebase); // 获取内存块的偏移量
   unsigned node_size, index = 0;
   unsigned left_longest, right_longest;
 
-  assert(self && offset >= 0 && offset < self->size);
+  assert(self && offset >= 0 && offset < self->size); // 确保buddy系统指针不为空且偏移量合法
 
   node_size = 1;
-  index = offset + self->size - 1;
+  index = offset + self->size - 1; // 计算节点索引
 
+  // 找到空闲节点
   for (; self->longest[index]; index = PARENT(index)) {
     node_size *= 2;
     if (index == 0)
-      return;
+      return; // 如果已经到达根节点，直接返回
   }
 
-  self->longest[index] = node_size;
+  self->longest[index] = node_size; // 将节点标记为空闲
+  struct Page* p=unsigned2page(index);
+  SetPageProperty(p);//设置内存块的属性标志，表示这是一个有效的内存块
+  self->size += node_size; // 更新buddy系统的大小
 
+  // 更新父节点的最大可用块大小
   while (index) {
-    index = PARENT(index);
+    index = PARENT(index); // 获取父节点索引
     node_size *= 2;
 
-    left_longest = self->longest[LEFT_LEAF(index)];
-    right_longest = self->longest[RIGHT_LEAF(index)];
+    left_longest = self->longest[LEFT_LEAF(index)]; // 获取左子节点的最大可用块大小
+    right_longest = self->longest[RIGHT_LEAF(index)]; // 获取右子节点的最大可用块大小
 
-    if (left_longest + right_longest == node_size)
-      self->longest[index] = node_size;
+    if (left_longest + right_longest == node_size) // 如果左右子节点的最大可用块大小之和等于当前节点大小
+      self->longest[index] = node_size; // 将当前节点标记为空闲
+
     else
-      self->longest[index] = MAX(left_longest, right_longest);
+      self->longest[index] = MAX(left_longest, right_longest); // 否则更新当前节点的最大可用块大小
   }
 }
 
@@ -146,41 +189,21 @@ int buddy2_size(int offset) {
   return node_size;
 }
 
-// 打印buddy系统状态
-// 参数: self - buddy系统的指针
-void buddy2_dump() {
-  char canvas[65];
-  int i, j;
-  unsigned node_size, offset;
-
-  if (self == NULL) {
-    printf("buddy2_dump: (struct buddy2*)self == NULL");
-    return;
-  }
-
-  if (self->size > 64) {
-    printf("buddy2_dump: (struct buddy2*)self is too big to dump");
-    return;
-  }
-
-  memset(canvas, '_', sizeof(canvas));
-  node_size = self->size * 2;
-
-  for (i = 0; i < 2 * self->size - 1; ++i) {
-    if (IS_POWER_OF_2(i + 1))
-      node_size /= 2;
-
-    if (self->longest[i] == 0) {
-      if (i >= self->size - 1) {
-        canvas[i - self->size + 1] = '*';
-      } else if (self->longest[LEFT_LEAF(i)] && self->longest[RIGHT_LEAF(i)]) {
-        offset = (i + 1) * node_size - self->size;
-
-        for (j = offset; j < offset + node_size; ++j)
-          canvas[j] = '*';
-      }
-    }
-  }
-  canvas[self->size] = '\0';
-  puts(canvas);
+//返回空闲页的数量
+static size_t
+buddy_nr_free_pages(void) {
+    return self->size;
 }
+static void
+buddy_check(void) {
+  cprintf("buddy_check start\n");
+}
+const struct pmm_manager buddy_pmm_manager = {
+    .name = "buddy_pmm_manager",
+    .init = buddy2_init,
+    .init_memmap = buddy2_new,
+    .alloc_pages = buddy2_alloc,
+    .free_pages = buddy2_free,
+    .nr_free_pages = buddy_nr_free_pages,
+    .check = buddy_check,
+};

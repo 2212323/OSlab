@@ -140,6 +140,8 @@ static void page_init(void) {
         //cprintf((mem_end - mem_begin) / PGSIZE);
         //初始化我们可以自由使用的物理内存
         init_memmap(pa2page(mem_begin), (mem_end - mem_begin) / PGSIZE);
+
+        cprintf("free physical memory: [0x%016lx, 0x%016lx).\n", mem_begin, mem_end);
     }
 }
 

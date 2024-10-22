@@ -65,6 +65,7 @@ typedef struct {
 } free_area_t;
 
 typedef struct  {// buddy系统结构
+  struct Page* base;//内存块的起始地址
   unsigned size;// buddy系统大小
   unsigned longest[1]; // 最大可用块大小
 }buddy2;

@@ -17,10 +17,10 @@ digraph G {
     "pmm_manager 内存管理器" -> "pmm_manager->nr_free_pages 内存管理器空闲页面数" [arrowhead="dot", color="red"];
     "pmm_manager 内存管理器" -> "pmm_manager->check 内存管理器检查" [arrowhead="dot", color="red"];
     "pmm_manager->check 内存管理器检查" -> "alloc_pages 分配页面";
-    "alloc_pages 分配页面" -> "pmm_manager->alloc_pages 内存管理器分配页面"[label="递归"];
+    "alloc_pages 分配页面" -> "pmm_manager->alloc_pages 内存管理器分配页面";
     "pmm_manager->check 内存管理器检查" -> "free_pages 释放页面";
-    "free_pages 释放页面" -> "pmm_manager->free_pages 内存管理器释放页面"[label="递归"];
+    "free_pages 释放页面" -> "pmm_manager->free_pages 内存管理器释放页面";
     "pmm_manager->check 内存管理器检查" -> "nr_free_pages 空闲页面数";
-    "nr_free_pages 空闲页面数" -> "pmm_manager->nr_free_pages 内存管理器空闲页面数"[label="递归"];
+    "nr_free_pages 空闲页面数" -> "pmm_manager->nr_free_pages 内存管理器空闲页面数";
     //[shape=ellipse, color=lightblue];
 }

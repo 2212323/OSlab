@@ -77,7 +77,9 @@ best_fit_init_memmap(struct Page *base, size_t n) {
 
         /*LAB2 EXERCISE 2: YOUR CODE*/ 
         // 清空当前页框的标志和属性信息，并将页框的引用计数设置为0
-        p->flags = 0;//清空当前页框的标志
+        p->flags = p->property = 0; //清空页的标志和属性
+        set_page_ref(p, 0); //设置页的引用计数为0
+
     }
     base->property = n;
     SetPageProperty(base);
@@ -158,12 +160,12 @@ best_fit_free_pages(struct Page *base, size_t n) {
     // 编写代码
     // 具体来说就是设置当前页块的属性为释放的页块数、并将当前页块标记为已分配状态、最后增加nr_free的值
 
-    base->property = n;//设置当前页块的属性为释放的页块数
+    base->property = n;//将要释放的页块的 property 属性设置为 n，表示该页块由 n 页组成
     SetPageProperty(base);//设置当前页块的属性为释放的页块数
     nr_free += n;//
 
 
-
+    // 如果空闲列表为空，直接添加基页
     if (list_empty(&free_list)) {
         list_add(&free_list, &(base->page_link));
     } else {

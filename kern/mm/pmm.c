@@ -135,6 +135,9 @@ static void page_init(void) {
     mem_begin = ROUNDUP(freemem, PGSIZE);
     mem_end = ROUNDDOWN(mem_end, PGSIZE);
     if (freemem < mem_end) {
+        cprintf("我们想知道自由使用的物理内存！！！！！%d\n",(mem_end - mem_begin) / PGSIZE);
+   
+        //cprintf((mem_end - mem_begin) / PGSIZE);
         //初始化我们可以自由使用的物理内存
         init_memmap(pa2page(mem_begin), (mem_end - mem_begin) / PGSIZE);
     }

@@ -168,6 +168,8 @@ default_alloc_pages(size_t n) {
             break;
         }
     }
+
+    //
     if (page != NULL) {
         list_entry_t* prev = list_prev(&(page->page_link));
         list_del(&(page->page_link)); // 从空闲列表中删除该块
@@ -197,6 +199,7 @@ default_free_pages(struct Page *base, size_t n) {
     SetPageProperty(base);
     nr_free += n;
 
+    // 如果空闲列表为空，直接添加基页
     if (list_empty(&free_list)) {
         list_add(&free_list, &(base->page_link));
     } else {
@@ -212,6 +215,8 @@ default_free_pages(struct Page *base, size_t n) {
         }
     }
 
+
+    // 合并前面的空闲页
     list_entry_t* le = list_prev(&(base->page_link));
     if (le != &free_list) {
         p = le2page(le, page_link);
@@ -223,6 +228,7 @@ default_free_pages(struct Page *base, size_t n) {
         }
     }
 
+// 合并后面的空闲页
     le = list_next(&(base->page_link));
     if (le != &free_list) {
         p = le2page(le, page_link);

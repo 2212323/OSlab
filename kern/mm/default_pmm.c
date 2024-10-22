@@ -247,17 +247,21 @@ static void
 basic_check(void) {
     struct Page *p0, *p1, *p2;
     p0 = p1 = p2 = NULL;
+    // 分配三个页，并确保分配成功
     assert((p0 = alloc_page()) != NULL);
     assert((p1 = alloc_page()) != NULL);
     assert((p2 = alloc_page()) != NULL);
 
+    // 确保三个页是不同的，并且引用计数为0
     assert(p0 != p1 && p0 != p2 && p1 != p2);
     assert(page_ref(p0) == 0 && page_ref(p1) == 0 && page_ref(p2) == 0);
 
+    // 确保页的物理地址在合法范围内
     assert(page2pa(p0) < npage * PGSIZE);
     assert(page2pa(p1) < npage * PGSIZE);
     assert(page2pa(p2) < npage * PGSIZE);
 
+    // 保存当前的空闲列表和空闲页数
     list_entry_t free_list_store = free_list;
     list_init(&free_list);
     assert(list_empty(&free_list));
@@ -265,30 +269,39 @@ basic_check(void) {
     unsigned int nr_free_store = nr_free;
     nr_free = 0;
 
+    // 确保无法分配页，因为空闲列表为空
     assert(alloc_page() == NULL);
 
+    // 释放三个页，并确保空闲页数增加
     free_page(p0);
     free_page(p1);
     free_page(p2);
     assert(nr_free == 3);
 
+    // 重新分配三个页，并确保分配成功
     assert((p0 = alloc_page()) != NULL);
     assert((p1 = alloc_page()) != NULL);
     assert((p2 = alloc_page()) != NULL);
 
+    // 确保无法再分配页，因为空闲列表为空
     assert(alloc_page() == NULL);
 
+    // 释放一个页，并确保空闲列表不为空
     free_page(p0);
     assert(!list_empty(&free_list));
 
+    // 分配一个页，并确保分配成功
     struct Page *p;
     assert((p = alloc_page()) == p0);
     assert(alloc_page() == NULL);
 
+    // 确保空闲页数为0
     assert(nr_free == 0);
+    // 恢复空闲列表和空闲页数
     free_list = free_list_store;
     nr_free = nr_free_store;
 
+    // 释放所有页
     free_page(p);
     free_page(p1);
     free_page(p2);
@@ -300,65 +313,66 @@ static void
 default_check(void) {
     int count = 0, total = 0;
     list_entry_t *le = &free_list;
+    // 遍历空闲页链表，统计空闲页的数量和总大小
     while ((le = list_next(le)) != &free_list) {
         struct Page *p = le2page(le, page_link);
-        assert(PageProperty(p));
-        count ++, total += p->property;
+        assert(PageProperty(p)); // 确保页具有属性
+        count++, total += p->property;
     }
-    assert(total == nr_free_pages());
+    assert(total == nr_free_pages()); // 确保统计的总大小与记录的空闲页数一致
 
-    basic_check();
+    basic_check(); // 进行基本检查
 
     struct Page *p0 = alloc_pages(5), *p1, *p2;
-    assert(p0 != NULL);
-    assert(!PageProperty(p0));
+    assert(p0 != NULL); // 确保分配成功
+    assert(!PageProperty(p0)); // 确保分配的页没有属性
 
     list_entry_t free_list_store = free_list;
-    list_init(&free_list);
-    assert(list_empty(&free_list));
-    assert(alloc_page() == NULL);
+    list_init(&free_list); // 初始化空闲页链表
+    assert(list_empty(&free_list)); // 确保空闲页链表为空
+    assert(alloc_page() == NULL); // 确保无法分配页
 
     unsigned int nr_free_store = nr_free;
-    nr_free = 0;
+    nr_free = 0; // 重置空闲页数
 
-    free_pages(p0 + 2, 3);
-    assert(alloc_pages(4) == NULL);
-    assert(PageProperty(p0 + 2) && p0[2].property == 3);
-    assert((p1 = alloc_pages(3)) != NULL);
-    assert(alloc_page() == NULL);
-    assert(p0 + 2 == p1);
+    free_pages(p0 + 2, 3); // 释放部分页
+    assert(alloc_pages(4) == NULL); // 确保无法分配超过空闲页数的页
+    assert(PageProperty(p0 + 2) && p0[2].property == 3); // 确保释放的页具有正确的属性
+    assert((p1 = alloc_pages(3)) != NULL); // 分配页
+    assert(alloc_page() == NULL); // 确保无法再分配页
+    assert(p0 + 2 == p1); // 确保分配的页地址正确
 
     p2 = p0 + 1;
-    free_page(p0);
-    free_pages(p1, 3);
-    assert(PageProperty(p0) && p0->property == 1);
-    assert(PageProperty(p1) && p1->property == 3);
+    free_page(p0); // 释放单个页
+    free_pages(p1, 3); // 释放多个页
+    assert(PageProperty(p0) && p0->property == 1); // 确保释放的页具有正确的属性
+    assert(PageProperty(p1) && p1->property == 3); // 确保释放的页具有正确的属性
 
-    assert((p0 = alloc_page()) == p2 - 1);
-    free_page(p0);
-    assert((p0 = alloc_pages(2)) == p2 + 1);
+    assert((p0 = alloc_page()) == p2 - 1); // 分配单个页
+    free_page(p0); // 释放单个页
+    assert((p0 = alloc_pages(2)) == p2 + 1); // 分配多个页
 
-    free_pages(p0, 2);
-    free_page(p2);
+    free_pages(p0, 2); // 释放多个页
+    free_page(p2); // 释放单个页
 
-    assert((p0 = alloc_pages(5)) != NULL);
-    assert(alloc_page() == NULL);
+    assert((p0 = alloc_pages(5)) != NULL); // 分配多个页
+    assert(alloc_page() == NULL); // 确保无法再分配页
 
-    assert(nr_free == 0);
-    nr_free = nr_free_store;
+    assert(nr_free == 0); // 确保空闲页数为0
+    nr_free = nr_free_store; // 恢复空闲页数
 
-    free_list = free_list_store;
-    free_pages(p0, 5);
+    free_list = free_list_store; // 恢复空闲页链表
+    free_pages(p0, 5); // 释放多个页
 
     le = &free_list;
+    // 遍历空闲页链表，确保统计的数量和总大小正确
     while ((le = list_next(le)) != &free_list) {
         struct Page *p = le2page(le, page_link);
-        count --, total -= p->property;
+        count--, total -= p->property;
     }
-    assert(count == 0);
-    assert(total == 0);
+    assert(count == 0); // 确保统计的数量为0
+    assert(total == 0); // 确保统计的总大小为0
 }
-//这个结构体在
 const struct pmm_manager default_pmm_manager = {
     .name = "default_pmm_manager",
     .init = default_init,

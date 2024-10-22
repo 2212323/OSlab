@@ -97,12 +97,14 @@ size_t nr_free_pages(void) {
     return ret;
 }
 
+
+//初始化物理内存管理系统。它设置了内核和用户程序可以使用的物理内存区域，并将这些区域标记为可用
 static void page_init(void) {
     va_pa_offset = PHYSICAL_MEMORY_OFFSET;
 
-    uint64_t mem_begin = KERNEL_BEGIN_PADDR;
-    uint64_t mem_size = PHYSICAL_MEMORY_END - KERNEL_BEGIN_PADDR;
-    uint64_t mem_end = PHYSICAL_MEMORY_END; //硬编码取代 sbi_query_memory()接口
+    uint64_t mem_begin = KERNEL_BEGIN_PADDR; //#define KERNEL_BEGIN_PADDR     0x80200000    应用程序的第一条指令   硬编码取代 sbi_query_memory()接口，内核的起始地址
+    uint64_t mem_size = PHYSICAL_MEMORY_END - KERNEL_BEGIN_PADDR;//内核的大小
+    uint64_t mem_end = PHYSICAL_MEMORY_END; //
 
     cprintf("physcial memory map:\n");
     cprintf("  memory: 0x%016lx, [0x%016lx, 0x%016lx].\n", mem_size, mem_begin,
@@ -124,11 +126,11 @@ static void page_init(void) {
 
     //一开始把所有页面都设置为保留给内核使用的，之后再设置哪些页面可以分配给其他程序
 
-    for (size_t i = 0; i < npage - nbase; i++) {
+    for (size_t i = 0; i < npage - nbase; i++) {//npage - nbase表示物理内存的页数
         SetPageReserved(pages + i);//记得吗？在kern/mm/memlayout.h定义的
     }
     //从这个地方开始才是我们可以自由使用的物理内存
-    uintptr_t freemem = PADDR((uintptr_t)pages + sizeof(struct Page) * (npage - nbase));
+    uintptr_t freemem = PADDR((uintptr_t)pages + sizeof(struct Page) * (npage - nbase)); //这里是第一个可以分配的物理内存的地址
     //按照页面大小PGSIZE进行对齐, ROUNDUP, ROUNDDOWN是在libs/defs.h定义的
     mem_begin = ROUNDUP(freemem, PGSIZE);
     mem_end = ROUNDDOWN(mem_end, PGSIZE);

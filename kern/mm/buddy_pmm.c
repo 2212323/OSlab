@@ -15,10 +15,13 @@
 #define ALLOC malloc
 #define FREE free
 
-#define PAGE_COUNT 128
+#define PAGE_COUNT 16384
 
 
-static unsigned fixsize(unsigned n) {
+static size_t longest_size;
+static size_t nodes_num;
+
+static unsigned fixsizeup(unsigned n) {
     // 如果n已经是2的幂次方，直接返回n
     if (n && !(n & (n - 1))) {
         return n;
@@ -33,6 +36,11 @@ static unsigned fixsize(unsigned n) {
     }
 
     return power;
+}
+
+static unsigned fixsizedown(unsigned n){
+  n=(fixsizeup(n)/2);
+  return n;
 }
 
 buddy2* self;
@@ -58,7 +66,6 @@ void buddy2_init()
   cprintf("buddy2_init start\n");
   self->size=0;
   self->longest[0]=0;
-  
 }
 void buddy2_new(struct  Page* base, size_t size) {
   size=PAGE_COUNT;
@@ -82,9 +89,25 @@ void buddy2_new(struct  Page* base, size_t size) {
 
   // if (size < 1 || !IS_POWER_OF_2(size))
   //   return NULL;
+if (size < 512)
+    {
+        nodes_num = fixsizeup(size - 1);
+        longest_size = 1;
+    }
+    else
+    {
+        nodes_num = fixsizedown(size);
+        longest_size = nodes_num * sizeof(size_t) * 2 / PGSIZE;
+        if (size > nodes_num + (longest_size << 1))
+        {
+            nodes_num <<= 1;
+            longest_size <<= 1;
+        }
+    }
+  //self->base+=(longest_size+10000);
 
   //self = (struct buddy2*)ALLOC(2 * size * sizeof(unsigned));//分配二叉树的空间
-  self->size += size;//设置buddy系统的大小
+  self->size = size;//设置buddy系统的大小
   node_size = size * 2;//设置节点大小
  //初始化buddy系统的最大可用块大小，开机
   for (i = 0; i < 2 * size - 1; ++i) {
@@ -113,7 +136,7 @@ struct Page* buddy2_alloc(size_t block) {
   if (block <= 0) // 如果请求的大小小于等于0
     block = 1; // 将大小设为1
   else if (!IS_POWER_OF_2(block)) // 如果请求的大小不是2的幂
-    block = fixsize(block); // 调整大小为2的幂
+    block = fixsizeup(block); // 调整大小为2的幂
 
   if (self->longest[index] < block) // 如果根节点的最大可用块小于请求的大小
     return NULL; // 返回-1表示失败
@@ -206,10 +229,13 @@ buddy_nr_free_pages(void) {
 }
 static void
 buddy_check(void) {
-  buddy2_alloc(5);
-  buddy2_free(0,0);
-  buddy2_alloc(16);
-  cprintf("buddy_check start\n");
+    buddy2_alloc(8);
+    buddy2_alloc(16);
+    buddy2_alloc(32);
+    struct Page *p= self->base;
+    buddy2_alloc(64);
+    buddy2_alloc(1024);
+    buddy2_alloc(8000);
 }
 const struct pmm_manager buddy_pmm_manager = {
     .name = "buddy_pmm_manager",

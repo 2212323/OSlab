@@ -66,6 +66,8 @@ void buddy2_init()
   cprintf("buddy2_init start\n");
   self->size=0;
   self->longest[0]=0;
+  self->free=0;
+   //cprintf("size:::%d\n",self->size);
 }
 void buddy2_new(struct  Page* base, size_t size) {
   size=PAGE_COUNT;
@@ -108,6 +110,7 @@ if (size < 512)
 
   //self = (struct buddy2*)ALLOC(2 * size * sizeof(unsigned));//分配二叉树的空间
   self->size = size;//设置buddy系统的大小
+      cprintf("caonimaaaaaaa:%d\n",self->size);
   node_size = size * 2;//设置节点大小
  //初始化buddy系统的最大可用块大小，开机
   for (i = 0; i < 2 * size - 1; ++i) {
@@ -118,7 +121,7 @@ if (size < 512)
                                  //8 44 2222 11111111
   }
 
-
+self->free=size;
   cprintf("buddy2_new end\n");
 }
 
@@ -161,7 +164,7 @@ struct Page* buddy2_alloc(size_t block) {
 
   struct Page* p=unsigned2page(offset);
   ClearPageProperty(p); // 清除真实物理内存已分配块的属性
-  //self->size -= size; // 更新buddy系统的大小
+  self->free -= block; // 更新buddy系统的大小 //0003
   return p; // 返回偏移量
 }
 
@@ -189,7 +192,7 @@ static void buddy2_free(struct Page *Freebase,size_t NoUse) {
   self->longest[index] = node_size; // 将节点标记为空闲
   struct Page* p=unsigned2page(index);
   SetPageProperty(p);//设置内存块的属性标志，表示这是一个有效的内存块
-  //self->size += node_size; // 更新buddy系统的大小
+  self->free += node_size; // 更新buddy系统的大小 ///0003
 
   // 更新父节点的最大可用块大小
   while (index) {
@@ -225,17 +228,21 @@ int buddy2_size(int offset) {
 //返回空闲页的数量
 static size_t
 buddy_nr_free_pages(void) {
-    return self->size;
+    return self->free;
 }
 static void
 buddy_check(void) {
-    buddy2_alloc(8);
-    buddy2_alloc(16);
-    buddy2_alloc(32);
+    struct Page *a=buddy2_alloc(999);
     struct Page *p= self->base;
-    buddy2_alloc(64);
-    buddy2_alloc(1024);
-    buddy2_alloc(8000);
+    cprintf("caonima:%d\n",buddy_nr_free_pages());
+    struct Page *b=buddy2_alloc(444);
+    cprintf("caonima:%d\n",buddy_nr_free_pages());
+    struct Page *c=buddy2_alloc(2000);
+    cprintf("caonima:%d\n",buddy_nr_free_pages());
+    buddy2_free(c,0);
+    cprintf("caonima:%d\n",buddy_nr_free_pages());
+    buddy2_free(a,0);
+    cprintf("caonima:%d\n",buddy_nr_free_pages());
 }
 const struct pmm_manager buddy_pmm_manager = {
     .name = "buddy_pmm_manager",

@@ -72,6 +72,12 @@ typedef size_t ppn_t;
  * @type:   the type of the struct this is embedded in
  * @member: the name of the member within the struct
  * */
+/* *
+ * to_struct - 从指针获取结构体
+ * @ptr:    成员的结构体指针
+ * @type:   包含该成员的结构体类型
+ * @member: 结构体中的成员名称
+ * */
 #define to_struct(ptr, type, member)                               \
     ((type *)((char *)(ptr) - offsetof(type, member)))
 

@@ -83,7 +83,7 @@ size_t nr_free_pages(void); // number of free pages
  * KADDR - 获取一个物理地址并返回相应的内核虚拟地址。
  * 如果传递了一个无效的物理地址，它会触发 panic。
  * */
-/*
+
 #define KADDR(pa)                                                \
     ({                                                           \
         uintptr_t __m_pa = (pa);                                 \
@@ -93,7 +93,7 @@ size_t nr_free_pages(void); // number of free pages
         }                                                        \
         (void *)(__m_pa + va_pa_offset);                         \
     })
-*/
+
 extern struct Page *pages;
 extern size_t npage;
 extern const size_t nbase;
@@ -104,6 +104,14 @@ static inline ppn_t page2ppn(struct Page *page) { return page - pages + nbase; }
 static inline uintptr_t page2pa(struct Page *page) {
     return page2ppn(page) << PGSHIFT;
 }
+
+// 页转虚拟地址
+static inline void *
+page2kva(struct Page *page)
+{
+    return KADDR(page2pa(page));
+}
+
 
 static inline int page_ref(struct Page *page) { return page->ref; }
 

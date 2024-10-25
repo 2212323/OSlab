@@ -1,10 +1,29 @@
-#include <pmm.h>
-#include <list.h>
-#include <buddy_pmm.h>
-#include <stdio.h>
-#include <assert.h>
-#include <memlayout.h>
+## Buddy算法设计文档
+### 1.概述
 
+Buddy算法是一种用于动态内存分配的算法，基于二叉树结构管理内存。其主要特点是将内存块按2的幂次方划分，当请求的内存不符合当前块大小时，按需将块一分为二，直到满足要求。释放时，如果相邻块空闲且大小相同，则合并成更大的块，确保内存高效利用。
+
+### 2.主要函数功能
+初始化系统: buddy2_init和buddy2_new 用于初始化 Buddy 系统，包括初始化数据结构和变量等。
+内存块分配: buddy2_alloc 根据需求动态分配内存块，内存块大小始终为2的n次幂。
+内存块释放: buddy2_free 负责释放已经分配的内存块，并将其合并到内存池中，确保资源可以被重复使用。
+内存状态查询: 通过 buddy_nr_free_pages 可以返回当前空闲的内存页数量，方便进行内存管理。
+
+### 3.具体实现
+1.首先，在其他文件中定义出我们所需的数据结构
+在memelayout.h中定义出buddy2结构体，其中包括base地址，系统总大小，存放二叉树的数组，以及空余页数。
+```c
+typedef struct  {// buddy系统结构
+  struct Page* base;//内存块的起始地址
+  unsigned size;// buddy系统大小
+  unsigned longest[32768]; // 最大可用块大小
+  int free;
+ }buddy2; 
+```
+2.新建出buddy_pmm.c和buddy_pmm.h
+3.首先对于后续要用到的部分提前进行宏定义和函数准备，包括有关2的n次幂的相关定义以及将数字整理为2的n次幂的函数，还有二叉树左右节点以及父节点的算法定义,此外还有offset与页指针相互转化的函数。
+这里由于buddy算法的特点以及用于已知环境中，选择将内存页数配置为已知环境中与页数总值最接近的2的n次幂，也就是16384页。
+```c
 #define LEFT_LEAF(index) ((index) * 2 + 1)
 #define RIGHT_LEAF(index) ((index) * 2 + 2)
 #define PARENT(index) ( ((index) + 1) / 2 - 1)
@@ -22,15 +41,12 @@ static unsigned fixsizeup(unsigned n) {
     if (n && !(n & (n - 1))) {
         return n;
     }
-
     unsigned power = 1;
-
     // 将n的最高位1的后面所有位都变为1
     while (n > 0) {
         n >>= 1;
         power <<= 1;
     }
-
     return power;
 }
 
@@ -53,9 +69,11 @@ unsigned page2unsigned(struct Page* p){
   //OK
     return (p-self->base);
 }
-// 创建一个新的buddy系统
-// 参数: size - buddy系统的大小，必须是2的幂
-// 返回值: 成功返回buddy系统的指针，失败返回NULL
+```
+4.init和new函数的实现
+首先在init函数中将所有内容设置为0
+new函数中首先将所有页设置为未使用，然后设置buddy2结构体中各个变量的赋值，最后初始化整个二叉树用于实现buddy系统，其中每个节点中的变量值设置为其所对应的页数。
+```c
 void buddy2_init()
 {
   self=&buddy;
@@ -101,10 +119,10 @@ void buddy2_new(struct  Page* base, size_t size) {
   self->free=size;
   cprintf("buddy2_new end\n");
 }
-
-// 分配内存块
-// 参数: self - buddy系统的指针, size - 要分配的内存块大小
-// 返回值: 成功返回内存块的偏移量，失败返回-1
+```
+5.alloc页面分配函数
+这里使用循环来遍历树（优先左子树），来寻找与目标大小向上取整大小相同的节点，并实现分配，同时对分配出去的节点更新为0，再更新其沿线所有节点的值。更新free数值。最后返回分配页起点的指针。
+```c
 struct Page* buddy2_alloc(size_t block) {
   unsigned index = 0; // 初始化索引为0
   unsigned node_size; // 节点大小
@@ -144,7 +162,10 @@ struct Page* buddy2_alloc(size_t block) {
   self->free -= block; // 更新buddy系统的大小 //0003
   return p; // 返回偏移量
 }
-
+```
+6.free释放函数
+首先同样是根据要释放的页面的索引去搜索二叉树上的对应节点，找到后复原节点数值并且复原内存页状态。最后更新free数值。
+```c
 // 释放内存块
 // 参数: self - buddy系统的指针, offset - 要释放的内存块的偏移量
 // 释放内存块
@@ -186,33 +207,17 @@ static void buddy2_free(struct Page *Freebase,size_t NoUse) {
       self->longest[index] = MAX(left_longest, right_longest); // 否则更新当前节点的最大可用块大小
   }
 }
-
-// 获取内存块大小
-// 参数: self - buddy系统的指针, offset - 内存块的偏移量
-// 返回值: 内存块的大小
-int buddy2_size(int offset) {
-  unsigned node_size, index = 0;
-
-  assert(self && offset >= 0 && offset < self->size);
-
-  node_size = 1;
-  for (index = offset + self->size - 1; self->longest[index]; index = PARENT(index))
-    node_size *= 2;
-
-  return node_size;
-}
-
-//返回空闲页的数量
+```
+7.空余页函数
+因为专门设计了free变量用于记录空余页，所以直接返回该值就可以
+```c
 static size_t
 buddy_nr_free_pages(void) {
     return self->free;
 }
-// static void
-// buddy_check(void) {
-
-//   // cprintf("buddy_check start\n");
-//   // cprintf("buddy_check start\n");
-// }
+```
+### 4.测试
+```c
 static void
 buddy_check(void) {
     struct Page *a=buddy2_alloc(999);
@@ -227,12 +232,17 @@ buddy_check(void) {
     buddy2_free(a,0);
     cprintf("当前空余内存大小:%d\n",buddy_nr_free_pages());
 }
-const struct pmm_manager buddy_pmm_manager = {
-    .name = "buddy_pmm_manager",
-    .init = buddy2_init,
-    .init_memmap = buddy2_new,
-    .alloc_pages = buddy2_alloc,
-    .free_pages = buddy2_free,
-    .nr_free_pages = buddy_nr_free_pages,
-    .check = buddy_check,
-};
+```
+在测试中尝试分配了三个块并释放了其中的两个，在每次分配和释放后都输出了空余内存页数：
+
+初始化内存页数:16384
+buddy2_new end
+free physical memory: [0x0000000080366000, 0x0000000088000000).
+当前空余内存大小:15360
+当前空余内存大小:14848
+当前空余内存大小:12800
+当前空余内存大小:14848
+当前空余内存大小:15872
+
+可以看到每次分配和释放都是成功的，并且块大小都为向上取整的2的n次幂。证明buddy系统实现成功。
+

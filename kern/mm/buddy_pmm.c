@@ -207,6 +207,12 @@ static size_t
 buddy_nr_free_pages(void) {
     return self->free;
 }
+// static void
+// buddy_check(void) {
+
+//   // cprintf("buddy_check start\n");
+//   // cprintf("buddy_check start\n");
+// }
 static void
 buddy_check(void) {
     struct Page *a=buddy2_alloc(999);

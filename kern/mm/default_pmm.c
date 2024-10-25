@@ -379,6 +379,16 @@ default_check(void) {
     assert(count == 0); // 确保统计的数量为0
     assert(total == 0); // 确保统计的总大小为0
 }
+
+// static void
+// default_check(void) {
+//      struct Page* p= default_alloc_pages(7);
+//      //buddy2_free(p,0);
+//      //buddy2_free(p+1,0);
+//      //buddy2_alloc(4);
+//      default_alloc_pages(1);
+// }
+
 const struct pmm_manager default_pmm_manager = {
     .name = "default_pmm_manager",
     .init = default_init,

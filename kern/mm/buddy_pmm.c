@@ -15,7 +15,7 @@
 #define ALLOC malloc
 #define FREE free
 
-#define PAGE_COUNT 16384
+#define PAGE_COUNT 128
 // 修正大小为2的幂
 static unsigned fixsize(unsigned size) {
   //TODO
@@ -127,7 +127,7 @@ struct Page* buddy2_alloc(size_t size) {
   }
 
   struct Page* p=unsigned2page(offset);
-  ClearPageProperty(p); // 清除真实物理内存已分配块的属性
+  //ClearPageProperty(p); // 清除真实物理内存已分配块的属性
   self->size -= size; // 更新buddy系统的大小
   return p; // 返回偏移量
 }
@@ -155,7 +155,7 @@ static void buddy2_free(struct Page *Freebase,size_t NoUse) {
 
   self->longest[index] = node_size; // 将节点标记为空闲
   struct Page* p=unsigned2page(index);
-  SetPageProperty(p);//设置内存块的属性标志，表示这是一个有效的内存块
+  //SetPageProperty(p);//设置内存块的属性标志，表示这是一个有效的内存块
   self->size += node_size; // 更新buddy系统的大小
 
   // 更新父节点的最大可用块大小
@@ -194,9 +194,23 @@ static size_t
 buddy_nr_free_pages(void) {
     return self->size;
 }
+// static void
+// buddy_check(void) {
+
+//   // cprintf("buddy_check start\n");
+//   // cprintf("buddy_check start\n");
+// }
 static void
-buddy_check(void) {
-  cprintf("buddy_check start\n");
+buddy2_check(void) {
+     struct Page* p1= alloc_pages(7);
+     //buddy2_free(p,0);
+     //buddy2_free(p+1,0);
+     //buddy2_alloc(4);
+     struct Page* p2=alloc_pages(1);
+     struct Page* p3=alloc_pages(4);
+      free_pages(p1,0);
+    //  free_pages(p2,0);
+    //  free_pages(p3,0);
 }
 const struct pmm_manager buddy_pmm_manager = {
     .name = "buddy_pmm_manager",
@@ -205,5 +219,6 @@ const struct pmm_manager buddy_pmm_manager = {
     .alloc_pages = buddy2_alloc,
     .free_pages = buddy2_free,
     .nr_free_pages = buddy_nr_free_pages,
-    .check = buddy_check,
+    .check = buddy2_check,
+    
 };

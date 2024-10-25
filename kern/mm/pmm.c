@@ -148,6 +148,8 @@ static void page_init(void) {
 /* pmm_init - initialize the physical memory management */
 // pmm_init - 初始化物理内存管理
 void pmm_init(void) {
+
+    
     // We need to alloc/free the physical memory (granularity is 4KB or other size).
     // 我们需要分配/释放物理内存（粒度为 4KB 或其他大小）。
     // So a framework of physical memory manager (struct pmm_manager)is defined in pmm.h
@@ -177,6 +179,7 @@ void pmm_init(void) {
 }
 
 static void check_alloc_page(void) {
+    cprintf("check_alloc_page) succeeded!\n");
     pmm_manager->check();
     cprintf("check_alloc_page() succeeded!\n");
 }

@@ -1,0 +1,48 @@
+digraph G {
+    "vmm_init" [label="vmm_init\n初始化虚拟内存管理"];
+    "check_vmm" [label="check_vmm\n检查虚拟内存管理"];
+    "check_vma_struct" [label="check_vma_struct\n检查虚拟内存区域结构"];
+    "check_pgfault" [label="check_pgfault\n检查页故障"];
+    "mm_create" [label="mm_create\n创建内存管理"];
+    "vma_create" [label="vma_create\n创建虚拟内存区域"];
+    "insert_vma_struct" [label="insert_vma_struct\n插入虚拟内存区域结构"];
+    "find_vma" [label="find_vma\n查找虚拟内存区域"];
+    "mm_destroy" [label="mm_destroy\n销毁内存管理"];
+    "page_remove" [label="page_remove\n移除页面"];
+    "free_page" [label="free_page\n释放页面"];
+    "do_pgfault" [label="do_pgfault\n处理页故障"];
+    "get_pte" [label="get_pte\n获取页表项"];
+    "pgdir_alloc_page" [label="pgdir_alloc_page\n分配页目录页面"];
+    "swap_in" [label="swap_in\n交换进来"];
+    "page_insert" [label="page_insert\n插入页面"];
+    "swap_map_swappable" [label="swap_map_swappable\n交换映射可交换"];
+
+    "vmm_init" -> "check_vmm"; // 初始化虚拟内存管理
+    "check_vmm" -> "check_vma_struct"; // 检查虚拟内存区域结构
+    "check_vmm" -> "check_pgfault"; // 检查页故障
+
+    "check_vma_struct" -> "mm_create"; // 创建内存管理
+    "check_vma_struct" -> "vma_create"; // 创建虚拟内存区域
+    "check_vma_struct" -> "insert_vma_struct"; // 插入虚拟内存区域结构
+    "check_vma_struct" -> "find_vma"; // 查找虚拟内存区域
+    "check_vma_struct" -> "mm_destroy"; // 销毁内存管理
+
+    "check_pgfault" -> "mm_create"; // 创建内存管理
+    "mm_create"-> "kmalloc"; // 分配内存
+    "mm_create"-> "swap_init_mm"; // 初始化交换内存
+    "check_pgfault" -> "vma_create"; // 创建虚拟内存区域
+    "vma_create" -> "kmalloc"; // 分配内存
+    "check_pgfault" -> "insert_vma_struct"; // 插入虚拟内存区域结构
+    "check_pgfault" -> "find_vma"; // 查找虚拟内存区域
+    "check_pgfault" -> "page_remove"; // 移除页面
+    "check_pgfault" -> "free_page"; // 释放页面
+    "check_pgfault" -> "mm_destroy"; // 销毁内存管理
+    "mm_destroy" -> "kfree"; // 释放页面
+
+    "do_pgfault" -> "find_vma"; // 查找虚拟内存区域
+    "do_pgfault" -> "get_pte"; // 获取页表项
+    "do_pgfault" -> "pgdir_alloc_page"; // 分配页目录页面
+    "do_pgfault" -> "swap_in"; // 交换进来
+    "do_pgfault" -> "page_insert"; // 插入页面
+    "do_pgfault" -> "swap_map_swappable"; // 交换映射可交换
+}

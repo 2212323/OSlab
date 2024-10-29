@@ -33,8 +33,32 @@
      void check_vma_struct(void);
      void check_pgfault(void);
 */
-
-// szx func : print_vma and print_mm
+/*
+  vmm 设计包括两个部分：mm_struct（mm）和 vma_struct（vma）
+  mm 是一组连续虚拟内存区域的内存管理器，这些区域具有相同的 PDT。vma 是一个连续的虚拟内存区域。
+  在 mm 中有一个用于 vma 的线性链表和一个红黑树链表。
+---------------
+  mm 相关函数：
+   全局函数
+     struct mm_struct * mm_create(void)
+     void mm_destroy(struct mm_struct *mm)
+     int do_pgfault(struct mm_struct *mm, uint_t error_code, uintptr_t addr)
+--------------
+  vma 相关函数：
+   全局函数
+     struct vma_struct * vma_create (uintptr_t vm_start, uintptr_t vm_end,...)
+     void insert_vma_struct(struct mm_struct *mm, struct vma_struct *vma)
+     struct vma_struct * find_vma(struct mm_struct *mm, uintptr_t addr)
+   局部函数
+     inline void check_vma_overlap(struct vma_struct *prev, struct vma_struct *next)
+---------------
+   检查正确性函数
+     void check_vmm(void);
+     void check_vma_struct(void);
+     void check_pgfault(void);
+*/
+// szx func : print_vma and print_mm 
+//szx 函数：print_vma 和 print_mm
 void print_vma(char *name, struct vma_struct *vma){
 	cprintf("-- %s print_vma --\n", name);
 	cprintf("   mm_struct: %p\n",vma->vm_mm);
@@ -58,7 +82,8 @@ static void check_vmm(void);
 static void check_vma_struct(void);
 static void check_pgfault(void);
 
-// mm_create -  alloc a mm_struct & initialize it.
+// mm_create - alloc a mm_struct & initialize it.
+// mm_create - 分配一个 mm_struct 并初始化它。
 struct mm_struct *
 mm_create(void) {
     struct mm_struct *mm = kmalloc(sizeof(struct mm_struct));
@@ -76,6 +101,7 @@ mm_create(void) {
 }
 
 // vma_create - alloc a vma_struct & initialize it. (addr range: vm_start~vm_end)
+// vma_create - 分配一个 vma_struct 并初始化它。（地址范围：vm_start~vm_end）
 struct vma_struct *
 vma_create(uintptr_t vm_start, uintptr_t vm_end, uint_t vm_flags) {
     struct vma_struct *vma = kmalloc(sizeof(struct vma_struct));
@@ -90,6 +116,7 @@ vma_create(uintptr_t vm_start, uintptr_t vm_end, uint_t vm_flags) {
 
 
 // find_vma - find a vma  (vma->vm_start <= addr <= vma_vm_end)
+// find_vma - 查找一个 vma（vma->vm_start <= addr <= vma_vm_end）
 struct vma_struct *
 find_vma(struct mm_struct *mm, uintptr_t addr) {
     struct vma_struct *vma = NULL;
@@ -118,6 +145,7 @@ find_vma(struct mm_struct *mm, uintptr_t addr) {
 
 
 // check_vma_overlap - check if vma1 overlaps vma2 ?
+// check_vma_overlap - 检查 vma1 是否与 vma2 重叠？
 static inline void
 check_vma_overlap(struct vma_struct *prev, struct vma_struct *next) {
     assert(prev->vm_start < prev->vm_end);
@@ -127,6 +155,7 @@ check_vma_overlap(struct vma_struct *prev, struct vma_struct *next) {
 
 
 // insert_vma_struct -insert vma in mm's list link
+// insert_vma_struct - 将 vma 插入 mm 的链表中
 void
 insert_vma_struct(struct mm_struct *mm, struct vma_struct *vma) {
     assert(vma->vm_start < vma->vm_end);
@@ -145,6 +174,7 @@ insert_vma_struct(struct mm_struct *mm, struct vma_struct *vma) {
     le_next = list_next(le_prev);
 
     /* check overlap */
+    /* 检查重叠 */
     if (le_prev != list) {
         check_vma_overlap(le2vma(le_prev, list_link), vma);
     }
@@ -159,6 +189,7 @@ insert_vma_struct(struct mm_struct *mm, struct vma_struct *vma) {
 }
 
 // mm_destroy - free mm and mm internal fields
+// mm_destroy - 释放 mm 和 mm 的内部字段
 void
 mm_destroy(struct mm_struct *mm) {
 
@@ -173,12 +204,15 @@ mm_destroy(struct mm_struct *mm) {
 
 // vmm_init - initialize virtual memory management
 //          - now just call check_vmm to check correctness of vmm
+// vmm_init - 初始化虚拟内存管理
+//          - 现在只需调用 check_vmm 来检查 vmm 的正确性
 void
 vmm_init(void) {
     check_vmm();
 }
 
 // check_vmm - check correctness of vmm
+// check_vmm - 检查 vmm 的正确性
 static void
 check_vmm(void) {
     size_t nr_free_pages_store = nr_free_pages();
@@ -190,7 +224,7 @@ check_vmm(void) {
 
     cprintf("check_vmm() succeeded.\n");
 }
-
+//检查vma_struct
 static void
 check_vma_struct(void) {
     size_t nr_free_pages_store = nr_free_pages();
@@ -256,9 +290,10 @@ check_vma_struct(void) {
 struct mm_struct *check_mm_struct;
 
 // check_pgfault - check correctness of pgfault handler
+// check_pgfault - 检查 pgfault 处理程序的正确性
 static void
 check_pgfault(void) {
-	// char *name = "check_pgfault";
+    // char *name = "check_pgfault";
     size_t nr_free_pages_store = nr_free_pages();
 
     check_mm_struct = mm_create();
@@ -304,6 +339,7 @@ check_pgfault(void) {
     cprintf("check_pgfault() succeeded!\n");
 }
 //page fault number
+//页错误数量
 volatile unsigned int pgfault_num=0;
 
 /* do_pgfault - interrupt handler to process the page fault execption

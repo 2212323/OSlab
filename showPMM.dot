@@ -1,0 +1,81 @@
+digraph G {
+    "pmm_init" [label="pmm_init\n初始化"];
+    "init_pmm_manager" [label="init_pmm_manager\n初始化内存管理器"];
+    "page_init" [label="page_init\n页面初始化"];
+    "check_alloc_page" [label="check_alloc_page\n检查分配页面"];
+    "check_pgdir" [label="check_pgdir\n检查页目录"];
+    "check_boot_pgdir" [label="check_boot_pgdir\n检查启动页目录"];
+
+    "pmm_init" -> "init_pmm_manager";
+    "pmm_init" -> "page_init";
+    "pmm_init" -> "check_alloc_page";
+    "pmm_init" -> "check_pgdir";
+    "pmm_init" -> "check_boot_pgdir";
+
+    "init_pmm_manager" -> "pmm_manager->init";
+
+    "page_init" -> "init_memmap";
+
+    "init_memmap" [label="init_memmap\n初始化内存映射"];
+    "init_memmap" -> "pmm_manager->init_memmap";
+
+    "alloc_pages" [label="alloc_pages\n分配页面"];
+    "alloc_pages" -> "pmm_manager->alloc_pages";
+    "alloc_pages" -> "swap_out";
+
+    "free_pages" [label="free_pages\n释放页面"];
+    "free_pages" -> "pmm_manager->free_pages";
+
+    "nr_free_pages" [label="nr_free_pages\n空闲页面数"];
+    "nr_free_pages" -> "pmm_manager->nr_free_pages";
+
+    "check_alloc_page" -> "pmm_manager->check";
+
+    "check_pgdir" -> "alloc_page";
+    "check_pgdir" -> "page_insert";
+    "check_pgdir" -> "get_pte";
+    "check_pgdir" -> "page_remove";
+    "check_pgdir" -> "free_page";
+
+    "check_boot_pgdir" -> "alloc_page";
+    "check_boot_pgdir" -> "page_insert";
+    "check_boot_pgdir" -> "get_pte";
+    "check_boot_pgdir" -> "free_page";
+
+    "get_pte" [label="get_pte\n获取页表项"];
+    "get_pte" -> "alloc_page";
+    "get_pte" -> "set_page_ref";
+    "get_pte" -> "page2pa";
+    "get_pte" -> "memset";
+    "get_pte" -> "pte_create";
+
+    "get_page" [label="get_page\n获取页面"];
+    "get_page" -> "get_pte";
+    "get_page" -> "pte2page";
+
+    "page_remove_pte" [label="page_remove_pte\n移除页表项"];
+    "page_remove_pte" -> "pte2page";
+    "page_remove_pte" -> "page_ref_dec";
+    "page_remove_pte" -> "free_page";
+    "page_remove_pte" -> "tlb_invalidate";
+
+    "page_remove" [label="page_remove\n移除页面"];
+    "page_remove" -> "get_pte";
+    "page_remove" -> "page_remove_pte";
+
+    "page_insert" [label="page_insert\n插入页面"];
+    "page_insert" -> "get_pte";
+    "page_insert" -> "page_ref_inc";
+    "page_insert" -> "pte2page";
+    "page_insert" -> "page_remove_pte";
+    "page_insert" -> "pte_create";
+    "page_insert" -> "tlb_invalidate";
+
+    "pgdir_alloc_page" [label="pgdir_alloc_page\n页目录分配页面"];
+    "pgdir_alloc_page" -> "alloc_page";
+    "pgdir_alloc_page" -> "page_insert";
+    "pgdir_alloc_page" -> "swap_map_swappable";
+
+    "tlb_invalidate" [label="tlb_invalidate\n刷新TLB"];
+    "tlb_invalidate" -> "flush_tlb";
+}

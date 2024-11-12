@@ -144,6 +144,16 @@ static void enable_paging(void) {
  * @param[in]  pa     Physical address of this memory
  * @param[in]  perm   The permission of this memory
  */
+
+/**
+ * @brief      设置并启用分页机制
+ *
+ * @param      pgdir  页目录
+ * @param[in]  la     需要映射的内存的线性地址
+ * @param[in]  size   内存大小
+ * @param[in]  pa     内存的物理地址
+ * @param[in]  perm   内存的权限
+ */
 static void boot_map_segment(pde_t *pgdir, uintptr_t la, size_t size,
                              uintptr_t pa, uint32_t perm) {
     assert(PGOFF(la) == PGOFF(pa));
@@ -244,6 +254,16 @@ void pmm_init(void) {
 //  la:     the linear address need to map
 //  create: a logical value to decide if alloc a page for PT
 // return vaule: the kernel virtual address of this pte
+/**
+ * @brief      获取页表项并返回此页表项的内核虚拟地址
+ *            如果包含此页表项的页表不存在，则为 PT 分配一个页面
+ * @param      pgdir   页目录表的内核虚拟基地址
+ * @param[in]  la      需要映射的线性地址
+ * @param[in]  create  一个逻辑值，用于决定是否为 PT 分配一个页面,为0时不分配
+ * @return     此页表项的内核虚拟地址
+ * 
+ * 
+ */
 pte_t *get_pte(pde_t *pgdir, uintptr_t la, bool create) {
     /*
      *
@@ -272,35 +292,76 @@ pte_t *get_pte(pde_t *pgdir, uintptr_t la, bool create) {
      *   PTE_U           0x004                   // page table/directory entry
      * flags bit : User can access
      */
+    /*
+     *
+     * 如果你需要访问物理地址，请使用 KADDR()
+     * 请阅读 pmm.h 以获取有用的宏
+     *
+     * 也许你需要帮助注释，下面的注释可以帮助你完成代码
+     *
+     * 一些有用的宏和定义，你可以在下面的实现中使用它们。
+     * 宏或函数：
+     *   PDX(la) = 虚拟地址 la 的页目录项索引。
+     *   KADDR(pa) : 获取一个物理地址并返回相应的内核虚拟地址。
+     *   set_page_ref(page,1) : 表示该页被引用了一次
+     *   page2pa(page): 获取该 (struct Page *) page 管理的内存的物理地址
+     *   struct Page * alloc_page() : 分配一个页
+     *   memset(void *s, char c, size_t n) : 将指向的内存区域的前 n 个字节设置为指定值 c。
+     * 定义：
+     *   PTE_P           0x001                   // 页表/目录项标志位：存在
+     *   PTE_W           0x002                   // 页表/目录项标志位：可写
+     *   PTE_U           0x004                   // 页表/目录项标志位：用户可访问
+     */
+    // 获取给定线性地址的第一级页目录项
     pde_t *pdep1 = &pgdir[PDX1(la)];
+    // 检查第一级页目录项是否有效
     if (!(*pdep1 & PTE_V)) {
         struct Page *page;
+        // 如果无效，并且 create 标志已设置，则分配一个新页
         if (!create || (page = alloc_page()) == NULL) {
             return NULL;
         }
+        // 设置页引用计数为 1
         set_page_ref(page, 1);
+        // 获取分配页的物理地址
         uintptr_t pa = page2pa(page);
+        // 清除分配的页
         memset(KADDR(pa), 0, PGSIZE);
+        // 创建一个具有用户和有效权限的新页表项
         *pdep1 = pte_create(page2ppn(page), PTE_U | PTE_V);
     }
+    // 获取给定线性地址的第二级页目录项
     pde_t *pdep0 = &((pde_t *)KADDR(PDE_ADDR(*pdep1)))[PDX0(la)];
-//    pde_t *pdep0 = &((pde_t *)(PDE_ADDR(*pdep1)))[PDX0(la)];
+    // 检查第二级页目录项是否有效
     if (!(*pdep0 & PTE_V)) {
-    	struct Page *page;
-    	if (!create || (page = alloc_page()) == NULL) {
-    		return NULL;
-    	}
-    	set_page_ref(page, 1);
-    	uintptr_t pa = page2pa(page);
-    	memset(KADDR(pa), 0, PGSIZE);
- //   	memset(pa, 0, PGSIZE);
-    	*pdep0 = pte_create(page2ppn(page), PTE_U | PTE_V);
+        struct Page *page;
+        // 如果无效，并且 create 标志已设置，则分配一个新页
+        if (!create || (page = alloc_page()) == NULL) {
+            return NULL;
+        }
+        // 设置页引用计数为 1
+        set_page_ref(page, 1);
+        // 获取分配页的物理地址
+        uintptr_t pa = page2pa(page);
+        // 清除分配的页
+        memset(KADDR(pa), 0, PGSIZE);
+        // 创建一个具有用户和有效权限的新页表项
+        *pdep0 = pte_create(page2ppn(page), PTE_U | PTE_V);
     }
+    // 返回给定线性地址的页表项的地址
     return &((pte_t *)KADDR(PDE_ADDR(*pdep0)))[PTX(la)];
 }
 
 // get_page - get related Page struct for linear address la using PDT pgdir
 // get_page - 使用页目录表 pgdir 获取线性地址 la 对应的 Page 结构体
+/**
+ * @brief      使用页目录表 pgdir 获取线性地址 la 对应的 Page 结构体
+ * @param      pgdir        页目录表
+ * @param[in]  la           线性地址
+ * @param[out] ptep_store   页表项指针
+ * @return     返回线性地址 la 对应的 Page 结构体
+ * 
+ */
 struct Page *get_page(pde_t *pgdir, uintptr_t la, pte_t **ptep_store) {
     pte_t *ptep = get_pte(pgdir, la, 0);
     if (ptep_store != NULL) {
@@ -315,6 +376,13 @@ struct Page *get_page(pde_t *pgdir, uintptr_t la, pte_t **ptep_store) {
 // page_remove_pte - free an Page sturct which is related linear address la
 //                - and clean(invalidate) pte which is related linear address la
 // note: PT is changed, so the TLB need to be invalidate
+/**
+ * @brief      释放与线性地址 la 相关的 Page 结构体，并清除（使无效）与线性地址 la 相关的 pte
+ * @param      pgdir  页目录表
+ * @param[in]  la     线性地址
+ * @param      ptep   页表项指针
+ * 
+ */
 static inline void page_remove_pte(pde_t *pgdir, uintptr_t la, pte_t *ptep) {
     /*
      *
@@ -353,6 +421,12 @@ static inline void page_remove_pte(pde_t *pgdir, uintptr_t la, pte_t *ptep) {
 
 // page_remove - free an Page which is related linear address la and has an
 // validated pte
+/**
+ * @brief      释放与线性地址 la 相关的 Page，并清除（使无效）与线性地址 la 相关的 pte
+ * @param      pgdir  页目录表
+ * @param[in]  la     线性地址
+ * 
+ */
 void page_remove(pde_t *pgdir, uintptr_t la) {
     pte_t *ptep = get_pte(pgdir, la, 0);
     if (ptep != NULL) {
@@ -368,6 +442,15 @@ void page_remove(pde_t *pgdir, uintptr_t la) {
 //  perm:  the permission of this Page which is setted in related pte
 // return value: always 0
 // note: PT is changed, so the TLB need to be invalidate
+/**
+ * @brief      建立一个 Page 的物理地址与线性地址 la 的映射
+ * @param      pgdir  页目录表的内核虚拟基地址
+ * @param      page   需要映射的 Page
+ * @param[in]  la     需要映射的线性地址
+ * @param[in]  perm   设置在相关 pte 中的 Page 的权限
+ * @return     返回值始终为 0
+ * 
+ */
 int page_insert(pde_t *pgdir, struct Page *page, uintptr_t la, uint32_t perm) {
     pte_t *ptep = get_pte(pgdir, la, 1);
     if (ptep == NULL) {
@@ -389,6 +472,12 @@ int page_insert(pde_t *pgdir, struct Page *page, uintptr_t la, uint32_t perm) {
 
 // invalidate a TLB entry, but only if the page tables being
 // edited are the ones currently in use by the processor.
+/**
+ * @brief      使 TLB 条目无效，但仅当当前正在使用的处理器是正在编辑的页表时
+ * @param      pgdir  页目录表
+ * @param[in]  la     线性地址
+ * 
+ */
 void tlb_invalidate(pde_t *pgdir, uintptr_t la) { flush_tlb(); }
 
 // pgdir_alloc_page - call alloc_page & page_insert functions to
@@ -427,11 +516,12 @@ static void check_pgdir(void) {
     size_t nr_free_store;
 
     nr_free_store = nr_free_pages(); // 保存当前空闲页数
-
+    // 测试get_pte()函数
     assert(npage <= KERNTOP / PGSIZE); // 确保物理页数不超过内核顶部
     assert(boot_pgdir != NULL && (uint32_t)PGOFF(boot_pgdir) == 0); // 确保页目录不为空且对齐
     assert(get_page(boot_pgdir, 0x0, NULL) == NULL); // 确保线性地址0没有映射
 
+    // 测试page_insert()函数
     struct Page *p1, *p2;
     p1 = alloc_page(); // 分配一个页
     assert(page_insert(boot_pgdir, p1, 0x0, 0) == 0); // 插入页到线性地址0
@@ -484,37 +574,45 @@ static void check_boot_pgdir(void) {
     pte_t *ptep;
     int i;
 
-    nr_free_store=nr_free_pages();
+    // 保存当前空闲页数
+    nr_free_store = nr_free_pages();
 
+    // 检查从 KERNBASE 开始的每个页是否正确映射
     for (i = ROUNDDOWN(KERNBASE, PGSIZE); i < npage * PGSIZE; i += PGSIZE) {
         assert((ptep = get_pte(boot_pgdir, (uintptr_t)KADDR(i), 0)) != NULL);
         assert(PTE_ADDR(*ptep) == i);
     }
 
-
+    // 确保页目录的第一个条目为空
     assert(boot_pgdir[0] == 0);
 
     struct Page *p;
+    // 分配一个页并插入到线性地址 0x100
     p = alloc_page();
     assert(page_insert(boot_pgdir, p, 0x100, PTE_W | PTE_R) == 0);
     assert(page_ref(p) == 1);
+    // 再次插入同一个页到线性地址 0x100 + PGSIZE
     assert(page_insert(boot_pgdir, p, 0x100 + PGSIZE, PTE_W | PTE_R) == 0);
     assert(page_ref(p) == 2);
 
+    // 测试字符串复制和比较
     const char *str = "ucore: Hello world!!";
     strcpy((void *)0x100, str);
     assert(strcmp((void *)0x100, (void *)(0x100 + PGSIZE)) == 0);
 
+    // 测试字符串长度
     *(char *)(page2kva(p) + 0x100) = '\0';
     assert(strlen((const char *)0x100) == 0);
 
-    pde_t *pd1=boot_pgdir,*pd0=page2kva(pde2page(boot_pgdir[0]));
+    // 释放页表和页目录
+    pde_t *pd1 = boot_pgdir, *pd0 = page2kva(pde2page(boot_pgdir[0]));
     free_page(p);
     free_page(pde2page(pd0[0]));
     free_page(pde2page(pd1[0]));
     boot_pgdir[0] = 0;
 
-    assert(nr_free_store==nr_free_pages());
+    // 确保空闲页数没有变化
+    assert(nr_free_store == nr_free_pages());
 
     cprintf("check_boot_pgdir() succeeded!\n");
 }

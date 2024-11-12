@@ -77,7 +77,13 @@ swap_set_unswappable(struct mm_struct *mm, uintptr_t addr)
 }
 
 volatile unsigned int swap_out_num=0;
-
+/**
+ * swap_out - 交换出n个页面
+ * @mm: 进程的内存描述符
+ * @n: 交换出的页面数
+ * @in_tick: 是否在时钟中断中调用
+ * 
+ */
 int
 swap_out(struct mm_struct *mm, int n, int in_tick)
 {

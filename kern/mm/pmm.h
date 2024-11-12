@@ -79,6 +79,9 @@ struct Page *pgdir_alloc_page(pde_t *pgdir, uintptr_t la, uint32_t perm);
  * KADDR - takes a physical address and returns the corresponding kernel virtual
  * address. It panics if you pass an invalid physical address.
  * */
+/**
+ * KADDR - 接受一个物理地址并返回相应的内核虚拟地址。
+ */
 #define KADDR(pa)                                                \
     ({                                                           \
         uintptr_t __m_pa = (pa);                                 \
@@ -139,6 +142,7 @@ static inline int page_ref_dec(struct Page *page) {
 static inline void flush_tlb() { asm volatile("sfence.vma"); }
 
 // construct PTE from a page and permission bits
+//从一个页和权限位构造PTE
 static inline pte_t pte_create(uintptr_t ppn, int type) {
     return (ppn << PTE_PPN_SHIFT) | PTE_V | type;
 }

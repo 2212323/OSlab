@@ -31,16 +31,17 @@ digraph G {
 
     "check_alloc_page" -> "pmm_manager->check";
 
-    "check_pgdir" -> "alloc_page";
+    //"check_pgdir" -> "alloc_page";
+    "check_pgdir" -> "get_page";
     "check_pgdir" -> "page_insert";
-    "check_pgdir" -> "get_pte";
+    //"check_pgdir" -> "get_pte";
     "check_pgdir" -> "page_remove";
-    "check_pgdir" -> "free_page";
+    //"check_pgdir" -> "free_page";
 
-    "check_boot_pgdir" -> "alloc_page";
+    //"check_boot_pgdir" -> "alloc_page";
     "check_boot_pgdir" -> "page_insert";
-    "check_boot_pgdir" -> "get_pte";
-    "check_boot_pgdir" -> "free_page";
+    //"check_boot_pgdir" -> "get_pte";
+    //"check_boot_pgdir" -> "free_page";
 
     "get_pte" [label="get_pte\n获取页表项"];
     "get_pte" -> "alloc_page";
@@ -65,14 +66,14 @@ digraph G {
 
     "page_insert" [label="page_insert\n插入页面"];
     "page_insert" -> "get_pte";
-    "page_insert" -> "page_ref_inc";
+    //"page_insert" -> "page_ref_inc";
     "page_insert" -> "pte2page";
     "page_insert" -> "page_remove_pte";
     "page_insert" -> "pte_create";
-    "page_insert" -> "tlb_invalidate";
+    //"page_insert" -> "tlb_invalidate";
 
     "pgdir_alloc_page" [label="pgdir_alloc_page\n页目录分配页面"];
-    "pgdir_alloc_page" -> "alloc_page";
+    //"pgdir_alloc_page" -> "alloc_page";
     "pgdir_alloc_page" -> "page_insert";
     "pgdir_alloc_page" -> "swap_map_swappable";
 

@@ -19,6 +19,118 @@ get_pte()函数（位于`kern/mm/pmm.c`）用于在页表中查找或创建页�
  - get_pte()函数中有两段形式类似的代码， 结合sv32，sv39，sv48的异同，解释这两段代码为什么如此相像。
  - 目前get_pte()函数将页表项的查找和页表项的分配合并在一个函数里，你认为这种写法好吗？有没有必要把两个功能拆开？
 
+`kern/mm/pmm.c`中的`get_pte()`函数内容如下：
+
+```c
+/**
+ * @brief      获取页表项并返回此页表项的内核虚拟地址
+ *            如果包含此页表项的页表不存在，则为 PT 分配一个页面
+ * @param      pgdir   页目录表的内核虚拟基地址
+ * @param[in]  la      需要映射的线性地址
+ * @param[in]  create  一个逻辑值，用于决定是否为 PT 分配一个页面,为0时不分配
+ * @return     此页表项的内核虚拟地址
+ * 
+ * 
+ */
+pte_t *get_pte(pde_t *pgdir, uintptr_t la, bool create) {
+    pde_t *pdep1 = &pgdir[PDX1(la)];
+    if (!(*pdep1 & PTE_V)) {
+        struct Page *page;
+        if (!create || (page = alloc_page()) == NULL) {
+            return NULL;
+        }
+        set_page_ref(page, 1);
+        uintptr_t pa = page2pa(page);
+        memset(KADDR(pa), 0, PGSIZE);
+        *pdep1 = pte_create(page2ppn(page), PTE_U | PTE_V);
+    }
+    pde_t *pdep0 = &((pde_t *)KADDR(PDE_ADDR(*pdep1)))[PDX0(la)];
+//    pde_t *pdep0 = &((pde_t *)(PDE_ADDR(*pdep1)))[PDX0(la)];
+    if (!(*pdep0 & PTE_V)) {
+    	struct Page *page;
+    	if (!create || (page = alloc_page()) == NULL) {
+    		return NULL;
+    	}
+    	set_page_ref(page, 1);
+    	uintptr_t pa = page2pa(page);
+    	memset(KADDR(pa), 0, PGSIZE);
+ //   	memset(pa, 0, PGSIZE);
+    	*pdep0 = pte_create(page2ppn(page), PTE_U | PTE_V);
+    }
+    return &((pte_t *)KADDR(PDE_ADDR(*pdep0)))[PTX(la)];
+}
+
+```
+*get_pte()函数中有两段形式类似的代码， 结合sv32，sv39，sv48的异同，解释这两段代码为什么如此相像。*
+在不同的分页机制中：
+- sv32：使用两级页表，每级页表项大小为 4 字节，页表大小为 4 KB。
+- sv39：使用三级页表，每级页表项大小为 8 字节，页表大小为 4 KB。
+- sv48：使用四级页表，每级页表项大小为 8 字节，页表大小为 4 KB。
+
+在这里使用的是sv39，具有三级页表的结构。在获取页表项并返回此页表项的内核虚拟地址的过程中体现了这一点，一共获取了三次，对应三级指针：
+```c
+    pde_t *pdep1 = &pgdir[PDX1(la)];
+```
+这里是第一级页表，这里使用的`PDX1(la)`的宏定义展开之后`#define PDX1(la) ((((uintptr_t)(la)) >> 30) & 0x1FF)`,右移30位并做掩码操作，获取了第一级页目录项索引之后在页目录表的内核虚拟基地址`pgdir`里面做偏移操作，找到第一级页目录项。
+
+从第一级到第二级的过程中，需要做这样的操作：
+```c
+    if (!(*pdep1 & PTE_V)) {
+        struct Page *page;
+        if (!create || (page = alloc_page()) == NULL) {
+            return NULL;
+        }
+        set_page_ref(page, 1);
+        uintptr_t pa = page2pa(page);
+        memset(KADDR(pa), 0, PGSIZE);
+        *pdep1 = pte_create(page2ppn(page), PTE_U | PTE_V);
+    }
+
+```
+逐步对于第一级的页表项进行判断：在有效的情况下，准备新建页。在短路逻辑的判断下，如果允许分配，就分配并作空值的异常处理；
+之后进行新建的一系列操作：设置引用计数，获取分配页的物理地址，清除分配的页，最后新建新的页表项并设置权限。这样就完成了第一级页表项的安排。
+
+之后进行第二级的页表项的指针
+
+```c
+    pde_t *pdep0 = &((pde_t *)KADDR(PDE_ADDR(*pdep1)))[PDX0(la)];
+
+```
+先从第一级页表项中提取物理地址，然后转成虚拟地址，并强制转换成页目录指针，其地址作为基址。然后用新的宏定义得到索引并计算偏移量，最后得到二级页表项的指针。
+
+之后的操作和第一级相同：
+```c
+    if (!(*pdep0 & PTE_V)) {
+    	struct Page *page;
+    	if (!create || (page = alloc_page()) == NULL) {
+    		return NULL;
+    	}
+    	set_page_ref(page, 1);
+    	uintptr_t pa = page2pa(page);
+    	memset(KADDR(pa), 0, PGSIZE);
+ //   	memset(pa, 0, PGSIZE);
+    	*pdep0 = pte_create(page2ppn(page), PTE_U | PTE_V);
+    }
+
+```
+同样的方式，与上面很相像，都是在确定了地址之后给他的内容赋值.
+
+最后第第三级页表项：
+```c
+return &((pte_t *)KADDR(PDE_ADDR(*pdep0)))[PTX(la)];
+```
+与获取第二级的指针一样，只是改变了宏，偏移量改变了。
+
+*目前get_pte()函数将页表项的查找和页表项的分配合并在一个函数里，你认为这种写法好吗？有没有必要把两个功能拆开？*
+
+这种写法是可以的，没必要拆开。
+
+首先函数的参数中包括bool值create，可以用来判断是否允许分配。这个值设置为0的时候 就是一个单纯的查找函数。
+
+而且分配之前为了安全考虑都需要进行查找防止重复分配，给这两个放在一起可以让代码运行的更加安全。
+
+
+
 #### 练习3：给未被映射的地址映射上物理页（需要编程）
 补充完成do_pgfault（mm/vmm.c）函数，给未被映射的地址映射上物理页。设置访问权限 的时候需要参考页面所在 VMA 的权限，同时需要注意映射物理页时需要操作内存控制 结构所指定的页表，而不是内核的页表。
 请在实验报告中简要说明你的设计实现过程。请回答如下问题：
@@ -33,6 +145,11 @@ get_pte()函数（位于`kern/mm/pmm.c`）用于在页表中查找或创建页�
 
 #### 练习5：阅读代码和实现手册，理解页表映射方式相关知识（思考题）
 如果我们采用”一个大页“ 的页表映射方式，相比分级页表，有什么好处、优势，有什么坏处、风险？
+
+好处和优势方面，可以减少页表项数量，使用较少的页表项来覆盖更大的地址空间，从而减少了页表的层级和页表项的数量，这可以显著减少页表的内存开销。而且还可以减少页表查找的层级，减少页表查找开销。
+
+
+坏处和风险方面，如果只使用了大页的一小部分，其余部分将被浪费。并且使用大页可能会导致内存碎片化问题，特别是在频繁分配和释放内存的情况下。这样会降低内存利用率，影响系统性能。因为它要求内存分配必须是大页的整数倍，灵活性不足。对于需要精细内存管理的应用场景可能不太适用。
 
 #### 扩展练习 Challenge：实现不考虑实现开销和效率的LRU页替换算法（需要编程）
 challenge部分不是必做部分，不过在正确最后会酌情加分。需写出有详细的设计、分析和测试的实验报告。完成出色的可获得适当加分。

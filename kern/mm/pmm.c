@@ -13,20 +13,27 @@
 #include <riscv.h>
 
 // virtual address of physical page array
+// 物理页数组的虚拟地址
 struct Page *pages;
 // amount of physical memory (in pages)
+// 物理内存的页数
 size_t npage = 0;
 // The kernel image is mapped at VA=KERNBASE and PA=info.base
+// 内核映像映射到 VA=KERNBASE 和 PA=info.base
 uint_t va_pa_offset;
 // memory starts at 0x80000000 in RISC-V
+// RISC-V 的内存从 0x80000000 开始
 const size_t nbase = DRAM_BASE / PGSIZE;
 
 // virtual address of boot-time page directory
+// 引导时页目录的虚拟地址
 pde_t *boot_pgdir = NULL;
 // physical address of boot-time page directory
+// 引导时页目录的物理地址
 uintptr_t boot_cr3;
 
 // physical memory management
+// 物理内存管理
 const struct pmm_manager *pmm_manager;
 
 
@@ -154,6 +161,9 @@ static void boot_map_segment(pde_t *pgdir, uintptr_t la, size_t size,
 // return value: the kernel virtual address of this allocated page
 // note: this function is used to get the memory for PDT(Page Directory
 // Table)&PT(Page Table)
+// boot_alloc_page - 使用 pmm->alloc_pages(1) 分配一页
+// 返回值：分配的页面的内核虚拟地址
+// 注意：此函数用于获取 PDT（页目录表）和 PT（页表）的内存
 static void *boot_alloc_page(void) {
     struct Page *p = alloc_page();
     if (p == NULL) {
@@ -165,6 +175,8 @@ static void *boot_alloc_page(void) {
 // pmm_init - setup a pmm to manage physical memory, build PDT&PT to setup
 // paging mechanism
 //         - check the correctness of pmm & paging mechanism, print PDT&PT
+// pmm_init - 设置一个物理内存管理器（pmm）来管理物理内存，构建页目录表（PDT）和页表（PT）以设置分页机制
+//         - 检查 pmm 和分页机制的正确性，打印 PDT 和 PT
 void pmm_init(void) {
     // We need to alloc/free the physical memory (granularity is 4KB or other
     // size).
@@ -174,16 +186,25 @@ void pmm_init(void) {
     // framework.
     // Then pmm can alloc/free the physical memory.
     // Now the first_fit/best_fit/worst_fit/buddy_system pmm are available.
+    // 我们需要分配/释放物理内存（粒度为 4KB 或其他大小）。
+    // 因此在 pmm.h 中定义了一个物理内存管理器的框架（struct pmm_manager）。
+    // 首先我们应该基于这个框架初始化一个物理内存管理器（pmm）。
+    // 然后 pmm 可以分配/释放物理内存。
+    // 现在有 first_fit/best_fit/worst_fit/buddy_system pmm 可用。
     init_pmm_manager();
 
     // detect physical memory space, reserve already used memory,
     // then use pmm->init_memmap to create free page list
+    // 检测物理内存空间，保留已使用的内存，
+    // 然后使用 pmm->init_memmap 创建空闲页列表
     page_init();
 
     // use pmm->check to verify the correctness of the alloc/free function in a
     // pmm
+    // 使用 pmm->check 验证 pmm 中分配/释放函数的正确性
     check_alloc_page();
     // create boot_pgdir, an initial page directory(Page Directory Table, PDT)
+    // 创建 boot_pgdir，一个初始页目录表（Page Directory Table，PDT）
     extern char boot_page_table_sv39[];
     boot_pgdir = (pte_t*)boot_page_table_sv39;
     boot_cr3 = PADDR(boot_pgdir);
@@ -193,22 +214,29 @@ void pmm_init(void) {
     // map all physical memory to linear memory with base linear addr KERNBASE
     // linear_addr KERNBASE~KERNBASE+KMEMSIZE = phy_addr 0~KMEMSIZE
     // But shouldn't use this map until enable_paging() & gdt_init() finished.
+    // 将所有物理内存映射到以 KERNBASE 为基地址的线性内存
+    // 线性地址 KERNBASE~KERNBASE+KMEMSIZE = 物理地址 0~KMEMSIZE
+    // 但在 enable_paging() 和 gdt_init() 完成之前不应使用此映射。
     //boot_map_segment(boot_pgdir, KERNBASE, KMEMSIZE, PADDR(KERNBASE),
      //                READ_WRITE_EXEC);
 
     // temporary map:
     // virtual_addr 3G~3G+4M = linear_addr 0~4M = linear_addr 3G~3G+4M =
     // phy_addr 0~4M
+    // 临时映射：
+    // 虚拟地址 3G~3G+4M = 线性地址 0~4M = 线性地址 3G~3G+4M =
+    // 物理地址 0~4M
     // boot_pgdir[0] = boot_pgdir[PDX(KERNBASE)];
 
     //    enable_paging();
+    //    启用分页
 
     // now the basic virtual memory map(see memalyout.h) is established.
     // check the correctness of the basic virtual memory map.
+    // 现在基本的虚拟内存映射（见 memlayout.h）已经建立。
+    // 检查基本虚拟内存映射的正确性。
     check_boot_pgdir();
-
 }
-
 // get_pte - get pte and return the kernel virtual address of this pte for la
 //        - if the PT contians this pte didn't exist, alloc a page for PT
 // parameter:
@@ -272,6 +300,7 @@ pte_t *get_pte(pde_t *pgdir, uintptr_t la, bool create) {
 }
 
 // get_page - get related Page struct for linear address la using PDT pgdir
+// get_page - 使用页目录表 pgdir 获取线性地址 la 对应的 Page 结构体
 struct Page *get_page(pde_t *pgdir, uintptr_t la, pte_t **ptep_store) {
     pte_t *ptep = get_pte(pgdir, la, 0);
     if (ptep_store != NULL) {
@@ -397,57 +426,57 @@ static void check_pgdir(void) {
     // so npage is always larger than KMEMSIZE / PGSIZE
     size_t nr_free_store;
 
-    nr_free_store=nr_free_pages();
+    nr_free_store = nr_free_pages(); // 保存当前空闲页数
 
-    assert(npage <= KERNTOP / PGSIZE);
-    assert(boot_pgdir != NULL && (uint32_t)PGOFF(boot_pgdir) == 0);
-    assert(get_page(boot_pgdir, 0x0, NULL) == NULL);
+    assert(npage <= KERNTOP / PGSIZE); // 确保物理页数不超过内核顶部
+    assert(boot_pgdir != NULL && (uint32_t)PGOFF(boot_pgdir) == 0); // 确保页目录不为空且对齐
+    assert(get_page(boot_pgdir, 0x0, NULL) == NULL); // 确保线性地址0没有映射
 
     struct Page *p1, *p2;
-    p1 = alloc_page();
-    assert(page_insert(boot_pgdir, p1, 0x0, 0) == 0);
+    p1 = alloc_page(); // 分配一个页
+    assert(page_insert(boot_pgdir, p1, 0x0, 0) == 0); // 插入页到线性地址0
     pte_t *ptep;
-    assert((ptep = get_pte(boot_pgdir, 0x0, 0)) != NULL);
-    assert(pte2page(*ptep) == p1);
-    assert(page_ref(p1) == 1);
+    assert((ptep = get_pte(boot_pgdir, 0x0, 0)) != NULL); // 获取页表项
+    assert(pte2page(*ptep) == p1); // 确保页表项指向p1
+    assert(page_ref(p1) == 1); // 确保页引用计数为1
 
-    ptep = (pte_t *)KADDR(PDE_ADDR(boot_pgdir[0]));
-    ptep = (pte_t *)KADDR(PDE_ADDR(ptep[0])) + 1;
-    assert(get_pte(boot_pgdir, PGSIZE, 0) == ptep);
+    ptep = (pte_t *)KADDR(PDE_ADDR(boot_pgdir[0])); // 获取页表项地址
+    ptep = (pte_t *)KADDR(PDE_ADDR(ptep[0])) + 1; // 获取下一个页表项地址
+    assert(get_pte(boot_pgdir, PGSIZE, 0) == ptep); // 确保页表项地址正确
 
-    p2 = alloc_page();
-    assert(page_insert(boot_pgdir, p2, PGSIZE, PTE_U | PTE_W) == 0);
-    assert((ptep = get_pte(boot_pgdir, PGSIZE, 0)) != NULL);
-    assert(*ptep & PTE_U);
-    assert(*ptep & PTE_W);
-    assert(boot_pgdir[0] & PTE_U);
-    assert(page_ref(p2) == 1);
+    p2 = alloc_page(); // 分配另一个页
+    assert(page_insert(boot_pgdir, p2, PGSIZE, PTE_U | PTE_W) == 0); // 插入页到线性地址PGSIZE
+    assert((ptep = get_pte(boot_pgdir, PGSIZE, 0)) != NULL); // 获取页表项
+    assert(*ptep & PTE_U); // 确保页表项有用户权限
+    assert(*ptep & PTE_W); // 确保页表项有写权限
+    assert(boot_pgdir[0] & PTE_U); // 确保页目录项有用户权限
+    assert(page_ref(p2) == 1); // 确保页引用计数为1
 
-    assert(page_insert(boot_pgdir, p1, PGSIZE, 0) == 0);
-    assert(page_ref(p1) == 2);
-    assert(page_ref(p2) == 0);
-    assert((ptep = get_pte(boot_pgdir, PGSIZE, 0)) != NULL);
-    assert(pte2page(*ptep) == p1);
-    assert((*ptep & PTE_U) == 0);
+    assert(page_insert(boot_pgdir, p1, PGSIZE, 0) == 0); // 插入p1到线性地址PGSIZE
+    assert(page_ref(p1) == 2); // 确保p1引用计数为2
+    assert(page_ref(p2) == 0); // 确保p2引用计数为0
+    assert((ptep = get_pte(boot_pgdir, PGSIZE, 0)) != NULL); // 获取页表项
+    assert(pte2page(*ptep) == p1); // 确保页表项指向p1
+    assert((*ptep & PTE_U) == 0); // 确保页表项没有用户权限
 
-    page_remove(boot_pgdir, 0x0);
-    assert(page_ref(p1) == 1);
-    assert(page_ref(p2) == 0);
+    page_remove(boot_pgdir, 0x0); // 移除线性地址0的页
+    assert(page_ref(p1) == 1); // 确保p1引用计数为1
+    assert(page_ref(p2) == 0); // 确保p2引用计数为0
 
-    page_remove(boot_pgdir, PGSIZE);
-    assert(page_ref(p1) == 0);
-    assert(page_ref(p2) == 0);
+    page_remove(boot_pgdir, PGSIZE); // 移除线性地址PGSIZE的页
+    assert(page_ref(p1) == 0); // 确保p1引用计数为0
+    assert(page_ref(p2) == 0); // 确保p2引用计数为0
 
-    assert(page_ref(pde2page(boot_pgdir[0])) == 1);
+    assert(page_ref(pde2page(boot_pgdir[0])) == 1); // 确保页目录项引用计数为1
 
-    pde_t *pd1=boot_pgdir,*pd0=page2kva(pde2page(boot_pgdir[0]));
-    free_page(pde2page(pd0[0]));
-    free_page(pde2page(pd1[0]));
-    boot_pgdir[0] = 0;
+    pde_t *pd1 = boot_pgdir, *pd0 = page2kva(pde2page(boot_pgdir[0])); // 获取页目录项地址
+    free_page(pde2page(pd0[0])); // 释放页表项
+    free_page(pde2page(pd1[0])); // 释放页目录项
+    boot_pgdir[0] = 0; // 清空页目录项
 
-    assert(nr_free_store==nr_free_pages());
+    assert(nr_free_store == nr_free_pages()); // 确保空闲页数没有变化
 
-    cprintf("check_pgdir() succeeded!\n");
+    cprintf("check_pgdir() succeeded!\n"); // 打印成功信息
 }
 
 static void check_boot_pgdir(void) {

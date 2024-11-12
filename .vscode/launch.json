@@ -14,7 +14,7 @@
         "miDebuggerServerAddress": "localhost:1234",  // 指定 GDB 服务器
         "serverLaunchTimeout": 2000,
         "MIMode": "gdb",
-        "miDebuggerPath": "/home/wjj/riscv64-unknown-elf-toolchain-10.2.0-2020.12.8-x86_64-linux-ubuntu14/bin/riscv64-unknown-elf-gdb",  // GDB 路径
+        "miDebuggerPath": "/home/neo/riscv64-unknown-elf-toolchain-10.2.0-2020.12.8-x86_64-linux-ubuntu14/bin/riscv64-unknown-elf-gdb",  // GDB 路径
         //"preLaunchTask": "Run QEMU with GDB",  // 在调试前运行 QEMU
         "setupCommands": [
             {

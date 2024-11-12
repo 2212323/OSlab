@@ -31,7 +31,7 @@ list_entry_t pra_list_head_f;
  *              Now, From the memory control struct mm_struct, we can access FIFO PRA
  */
 static int
-_fifo_init_mm(struct mm_struct *mm)
+_fifo_init_mm(struct mm_struct *mm)//初始化mm_struct中的swap manager
 {     
      list_init(&pra_list_head_f);
      mm->sm_priv = &pra_list_head_f;

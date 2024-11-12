@@ -24,6 +24,7 @@ static void print_ticks() {
 
 /* idt_init - initialize IDT to each of the entry points in kern/trap/vectors.S
  */
+//idt_init - 初始化 IDT 到 kern/trap/vectors.S 中的每个入口点
 void idt_init(void) {
     /* LAB1 YOUR CODE : STEP 2 */
     /* (1) Where are the entry addrs of each Interrupt Service Routine (ISR)?
@@ -44,6 +45,18 @@ void idt_init(void) {
      *     You don't know the meaning of this instruction? just google it! and
      * check the libs/x86.h to know more.
      *     Notice: the argument of lidt is idt_pd. try to find it!
+     */
+    /* 
+     * (1) 每个中断服务例程 (ISR) 的入口地址在哪里？
+     *     所有 ISR 的入口地址都存储在 __vectors 中。uintptr_t __vectors[] 在哪里？
+     *     __vectors[] 在 kern/trap/vector.S 中，由 tools/vector.c 生成
+     *     （在 lab1 中尝试 "make" 命令，然后你会在 kern/trap 目录中找到 vector.S）
+     *     你可以使用 "extern uintptr_t __vectors[];" 来定义这个外部变量，稍后会用到它。
+     * (2) 现在你应该在中断描述表 (IDT) 中设置 ISR 的条目。
+     *     你能在这个文件中看到 idt[256] 吗？是的，它是 IDT！你可以使用 SETGATE 宏来设置 IDT 的每一项
+     * (3) 设置 IDT 的内容后，你将使用 'lidt' 指令让 CPU 知道 IDT 的位置。
+     *     你不知道这条指令的含义？只需谷歌一下！并查看 libs/x86.h 以了解更多信息。
+     *     注意：lidt 的参数是 idt_pd。试着找到它！
      */
     extern void __alltraps(void);
     /* Set sscratch register to 0, indicating to exception vector that we are
@@ -115,7 +128,7 @@ static int pgfault_handler(struct trapframe *tf) {
     extern struct mm_struct *check_mm_struct;
     print_pgfault(tf);
     if (check_mm_struct != NULL) {
-        return do_pgfault(check_mm_struct, tf->cause, tf->badvaddr);
+        return do_pgfault(check_mm_struct, tf->cause, tf->badvaddr);//在vmm.c中，在此处调用do_pgfault
     }
     panic("unhandled page fault.\n");
 }

@@ -61,6 +61,10 @@ struct Page *pgdir_alloc_page(pde_t *pgdir, uintptr_t la, uint32_t perm);
  * the
  * corresponding physical address.  It panics if you pass it a non-kernel
  * virtual address.
+ * 
+ * PADDR - 接受一个内核虚拟地址（指向高于 KERNBASE 的地址），
+ * 该地址映射了机器的最大 256MB 物理内存，并返回相应的物理地址。
+ * 如果传递了一个非内核虚拟地址，它会触发 panic。
  * */
 #define PADDR(kva)                                                 \
     ({                                                             \

@@ -217,10 +217,7 @@ static void
 check_vmm(void) {
     size_t nr_free_pages_store = nr_free_pages();
     check_vma_struct();//检查vma_struct
-    cprintf("check_vma_struct()执行成功.\n");
     check_pgfault();
-    cprintf("check_pgfault()执行成功.\n");
-
     nr_free_pages_store--;	// szx : Sv39三级页表多占一个内存页，所以执行此操作
     assert(nr_free_pages_store == nr_free_pages());
 
@@ -384,7 +381,6 @@ volatile unsigned int pgfault_num=0;
  */
 int
 do_pgfault(struct mm_struct *mm, uint_t error_code, uintptr_t addr) {
-    cprintf("真的能进来吗");
     int ret = -E_INVAL; //无效参数
     //try to find a vma which include addr
     struct vma_struct *vma = find_vma(mm, addr);//尝试查找包含指定地址的vma
@@ -481,11 +477,13 @@ do_pgfault(struct mm_struct *mm, uint_t error_code, uintptr_t addr) {
             //(3) make the page swappable.
 
             //（1）根据 mm 和 addr，尝试将正确的磁盘页的内容加载到 page 管理的内存中
+            
             if (swap_in(mm, addr, &page) != 0) {
                 cprintf("swap_in in do_pgfault failed\n");
                 goto failed;
             }
             // （2）根据 mm、addr 和 page，设置物理地址和逻辑地址的映射
+            
             if (page_insert(mm->pgdir, page, addr, perm) != 0) {
                 cprintf("page_insert in do_pgfault failed\n");
                 goto failed;

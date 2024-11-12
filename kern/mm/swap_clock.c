@@ -43,7 +43,7 @@ _clock_init_mm(struct mm_struct *mm)
     
     // 初始化当前指针 curr_ptr 指向链表头
     curr_ptr = &pra_list_head;
-    cprintf('%d',curr_ptr);
+    //cprintf('%d',curr_ptr);
     // 将 mm->sm_priv 指向 pra_list_head，用于页面置换的后续操作
     mm->sm_priv = &pra_list_head;
      return 0;
@@ -64,7 +64,9 @@ _clock_map_swappable(struct mm_struct *mm, uintptr_t addr, struct Page *page, in
     // 将页面的visited标志置为1，表示该页面已被访问
     
     // 将页面插入到 pra_list_head 的末尾
-    list_add_before(&pra_list_head, entry);
+
+    //list_add_before(&pra_list_head, entry);
+    list_add_before((list_entry_t*) mm->sm_priv,entry);
     
     // 设置页面的 visited 标志为 1，表示该页面已被访问
     page->visited = 1;
@@ -91,7 +93,7 @@ _clock_swap_out_victim(struct mm_struct *mm, struct Page ** ptr_page, int in_tic
         // 如果当前页面未被访问，则将该页面从页面链表中删除，并将该页面指针赋值给ptr_page作为换出页面
         // 如果当前页面已被访问，则将visited标志置为0，表示该页面已被重新访问
         // 获取当前页面结构
-        struct Page *page = le2page(curr_ptr, pra_page_link);
+         struct Page *page = le2page(curr_ptr, pra_page_link);
         
         // 如果页面未被访问，选定为 victim
         if (page->visited == 0) {
@@ -103,12 +105,32 @@ _clock_swap_out_victim(struct mm_struct *mm, struct Page ** ptr_page, int in_tic
             // 如果已被访问，重置 visited 标志并移动指针到下一个页面
             page->visited = 0;
             curr_ptr = list_next(curr_ptr);
-            
+            cprintf("curr_ptr %p\n",curr_ptr);
             // 如果 curr_ptr 达到链表末尾，重新指向链表头
             if (curr_ptr == &pra_list_head) {
                 curr_ptr = list_next(curr_ptr);
             }
-    }
+        }
+
+        // curr_ptr = list_next(curr_ptr);
+        // if(curr_ptr == head) {
+        //     curr_ptr = list_next(curr_ptr);
+        //     if(curr_ptr == head) {
+        //         *ptr_page = NULL;
+        //         break;
+        //     }
+        // }
+        // struct Page* page = le2page(curr_ptr, pra_page_link);
+        // if(!page->visited) {
+        //     *ptr_page = page;
+        //     list_del(curr_ptr);
+        //     cprintf("curr_ptr %p\n",curr_ptr);
+        //     //curr_ptr = head;
+        //     break;
+        // } else {
+        //     page->visited = 0;
+        // }
+
     }
     return 0;
 }

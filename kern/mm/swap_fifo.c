@@ -25,13 +25,13 @@
  *              le2page (in memlayout.h), (in future labs: le2vma (in vmm.h), le2proc (in proc.h),etc.
  */
 
-list_entry_t pra_list_head_f;
+list_entry_t pra_list_head_f;//用于管理所有可交换页面的链表头。这个链表按照页面进入内存的顺序排列，最早进入的页面在链表的前面，最近进入的页面在链表的后面。
 /*
  * (2) _fifo_init_mm: init pra_list_head and let  mm->sm_priv point to the addr of pra_list_head.
  *              Now, From the memory control struct mm_struct, we can access FIFO PRA
  */
 static int
-_fifo_init_mm(struct mm_struct *mm)
+_fifo_init_mm(struct mm_struct *mm)//初始化 mm_struct 中的交换管理器
 {     
      list_init(&pra_list_head_f);
      mm->sm_priv = &pra_list_head_f;
@@ -42,8 +42,9 @@ _fifo_init_mm(struct mm_struct *mm)
  * (3)_fifo_map_swappable: According FIFO PRA, we should link the most recent arrival page at the back of pra_list_head qeueue
  */
 static int
-_fifo_map_swappable(struct mm_struct *mm, uintptr_t addr, struct Page *page, int swap_in)
+_fifo_map_swappable(struct mm_struct *mm, uintptr_t addr, struct Page *page, int swap_in)//将页面标记为可交换
 {
+    //将最近到达的页面链接到 pra_list_head 链表的末尾
     list_entry_t *head=(list_entry_t*) mm->sm_priv;
     list_entry_t *entry=&(page->pra_page_link);
  
@@ -59,18 +60,19 @@ _fifo_map_swappable(struct mm_struct *mm, uintptr_t addr, struct Page *page, int
  *                            then set the addr of addr of this page to ptr_page.
  */
 static int
-_fifo_swap_out_victim(struct mm_struct *mm, struct Page ** ptr_page, int in_tick)
+_fifo_swap_out_victim(struct mm_struct *mm, struct Page ** ptr_page, int in_tick)//选择一个页面进行换出
 {
-     list_entry_t *head=(list_entry_t*) mm->sm_priv;
+    //根据 FIFO 页面置换算法，选择链表前面的页面进行换出，并将该页面的地址设置到 ptr_page。
+     list_entry_t *head=(list_entry_t*) mm->sm_priv;//获取链表头
          assert(head != NULL);
      assert(in_tick==0);
      /* Select the victim */
      //(1)  unlink the  earliest arrival page in front of pra_list_head qeueue
      //(2)  set the addr of addr of this page to ptr_page
-    list_entry_t* entry = list_prev(head);
-    if (entry != head) {
-        list_del(entry);
-        *ptr_page = le2page(entry, pra_page_link);
+    list_entry_t* entry = list_prev(head);//获取链表的最早到达的页面
+    if (entry != head) {//如果链表不为空
+        list_del(entry);    //将该页面从链表中删除
+        *ptr_page = le2page(entry, pra_page_link);//将该页面的地址设置到 ptr_page
     } else {
         *ptr_page = NULL;
     }
@@ -78,7 +80,7 @@ _fifo_swap_out_victim(struct mm_struct *mm, struct Page ** ptr_page, int in_tick
 }
 
 static int
-_fifo_check_swap(void) {
+_fifo_check_swap(void) {//检查页面置换算法
     cprintf("write Virt Page c in fifo_check_swap\n");
     *(unsigned char *)0x3000 = 0x0c;
     assert(pgfault_num==4);
@@ -127,13 +129,13 @@ _fifo_init(void)
 }
 
 static int
-_fifo_set_unswappable(struct mm_struct *mm, uintptr_t addr)
+_fifo_set_unswappable(struct mm_struct *mm, uintptr_t addr) //设置页面为不可换出
 {
     return 0;
 }
 
 static int
-_fifo_tick_event(struct mm_struct *mm)
+_fifo_tick_event(struct mm_struct *mm)  //时钟中断处理函数
 { return 0; }
 
 

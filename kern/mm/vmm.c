@@ -67,7 +67,7 @@ void print_vma(char *name, struct vma_struct *vma){
 	cprintf("   list_entry_t: %p\n",&vma->list_link);
 }
 
-void print_mm(char *name, struct mm_struct *mm){
+void print_mm(char *name, struct mm_struct *mm){//打印mm_struct
 	cprintf("-- %s print_mm --\n",name);
 	cprintf("   mmap_list: %p\n",&mm->mmap_list);
 	cprintf("   map_count: %d\n",mm->map_count);
@@ -159,24 +159,24 @@ check_vma_overlap(struct vma_struct *prev, struct vma_struct *next) {
 void
 insert_vma_struct(struct mm_struct *mm, struct vma_struct *vma) {
     assert(vma->vm_start < vma->vm_end);
-    list_entry_t *list = &(mm->mmap_list);
-    list_entry_t *le_prev = list, *le_next;
+    list_entry_t *list = &(mm->mmap_list);//获取mm_struct的链表
+    list_entry_t *le_prev = list, *le_next;//前一个vma和后一个vma
 
         list_entry_t *le = list;
-        while ((le = list_next(le)) != list) {
-            struct vma_struct *mmap_prev = le2vma(le, list_link);
+        while ((le = list_next(le)) != list) {//遍历链表
+            struct vma_struct *mmap_prev = le2vma(le, list_link);//list entry转vma
             if (mmap_prev->vm_start > vma->vm_start) {
                 break;
             }
-            le_prev = le;
+            le_prev = le;//前一个vma
         }
 
-    le_next = list_next(le_prev);
+    le_next = list_next(le_prev);//后一个vma
 
     /* check overlap */
     /* 检查重叠 */
     if (le_prev != list) {
-        check_vma_overlap(le2vma(le_prev, list_link), vma);
+        check_vma_overlap(le2vma(le_prev, list_link), vma);//检查vma和前一个vma是否重叠
     }
     if (le_next != list) {
         check_vma_overlap(vma, le2vma(le_next, list_link));
@@ -216,9 +216,8 @@ vmm_init(void) {
 static void
 check_vmm(void) {
     size_t nr_free_pages_store = nr_free_pages();
-    check_vma_struct();
+    check_vma_struct();//检查vma_struct
     check_pgfault();
-
     nr_free_pages_store--;	// szx : Sv39三级页表多占一个内存页，所以执行此操作
     assert(nr_free_pages_store == nr_free_pages());
 
@@ -227,18 +226,19 @@ check_vmm(void) {
 //检查vma_struct
 static void
 check_vma_struct(void) {
-    size_t nr_free_pages_store = nr_free_pages();
+    //// 虚拟连续内存区域(vma)，[vm_start, vm_end)，地址属于一个vma意味着 vma.vm_start <= addr < vma.vm_end
+    size_t nr_free_pages_store = nr_free_pages();//空闲页数
 
-    struct mm_struct *mm = mm_create();
+    struct mm_struct *mm = mm_create();//创建一个mm_struct
     assert(mm != NULL);
 
     int step1 = 10, step2 = step1 * 10;
 
     int i;
     for (i = step1; i >= 1; i --) {
-        struct vma_struct *vma = vma_create(i * 5, i * 5 + 2, 0);
+        struct vma_struct *vma = vma_create(i * 5, i * 5 + 2, 0);//创建一个vma
         assert(vma != NULL);
-        insert_vma_struct(mm, vma);
+        insert_vma_struct(mm, vma);//插入一个vma到mm_struct中
     }
 
     for (i = step1 + 1; i <= step2; i ++) {
@@ -247,7 +247,7 @@ check_vma_struct(void) {
         insert_vma_struct(mm, vma);
     }
 
-    list_entry_t *le = list_next(&(mm->mmap_list));
+    list_entry_t *le = list_next(&(mm->mmap_list));//获取第一个vma
 
     for (i = 1; i <= step2; i ++) {
         assert(le != &(mm->mmap_list));
@@ -347,7 +347,7 @@ volatile unsigned int pgfault_num=0;
  * @error_code : the error code recorded in trapframe->tf_err which is setted by x86 hardware
  * @addr       : the addr which causes a memory access exception, (the contents of the CR2 register)
  *
- * CALL GRAPH: trap--> trap_dispatch-->pgfault_handler-->do_pgfault
+ * CALL GRAPH: 函数调用图：trap--> trap_dispatch-->pgfault_handler-->do_pgfault！！！！！！！！！！！！！！！！！！！
  * The processor provides ucore's do_pgfault function with two items of information to aid in diagnosing
  * the exception and recovering from it.
  *   (1) The contents of the CR2 register. The processor loads the CR2 register with the
@@ -363,15 +363,31 @@ volatile unsigned int pgfault_num=0;
  *         -- The U/S flag (bit 2) indicates whether the processor was executing at user mode (1)
  *            or supervisor mode (0) at the time of the exception.
  */
+/**
+ * do_pgfault - 中断处理程序，用于处理页错误异常
+ * @mm         : 使用相同 PDT 的一组 vma 的控制结构（PDT：Page Directory Tbale（页目录表））
+ * @error_code : 在 trapframe->tf_err 中记录的错误代码，由 x86 硬件设置
+ * @addr       : 导致内存访问异常的地址（CR2 寄存器的内容）
+ *
+ * 函数调用图：trap--> trap_dispatch-->pgfault_handler-->do_pgfault
+ * 处理器为 ucore 的 do_pgfault 函数提供了两项信息，以帮助诊断异常并从中恢复。
+ *   (1) CR2 寄存器的内容。处理器将 CR2 寄存器加载为生成异常的 32 位线性地址。
+ *       do_pgfault 函数可以使用此地址来定位相应的页目录和页表条目。
+ *   (2) 内核堆栈上的错误代码。页错误的错误代码格式不同于其他异常的错误代码。
+ *       错误代码告诉异常处理程序三件事：
+ *         -- P 标志（位 0）指示异常是由于不存在的页面（0）还是由于访问权限违规或使用保留位（1）。
+ *         -- W/R 标志（位 1）指示导致异常的内存访问是读取（0）还是写入（1）。
+ *         -- U/S 标志（位 2）指示处理器在异常发生时是在用户模式（1）还是在管理模式（0）下执行。
+ */
 int
 do_pgfault(struct mm_struct *mm, uint_t error_code, uintptr_t addr) {
-    int ret = -E_INVAL;
+    int ret = -E_INVAL; //无效参数
     //try to find a vma which include addr
-    struct vma_struct *vma = find_vma(mm, addr);
+    struct vma_struct *vma = find_vma(mm, addr);//尝试查找包含指定地址的vma
 
-    pgfault_num++;
-    //If the addr is in the range of a mm's vma?
-    if (vma == NULL || vma->vm_start > addr) {
+    pgfault_num++;  //页错误数量加1
+    //If the addr is in the range of a mm's vma?    //如果addr在mm的vma范围内？
+    if (vma == NULL || vma->vm_start > addr) {//如果vma为空或vma的起始地址大于addr
         cprintf("not valid addr %x, and  can not find it in vma\n", addr);
         goto failed;
     }
@@ -382,13 +398,13 @@ do_pgfault(struct mm_struct *mm, uint_t error_code, uintptr_t addr) {
      * THEN
      *    continue process
      */
-    uint32_t perm = PTE_U;
-    if (vma->vm_flags & VM_WRITE) {
-        perm |= (PTE_R | PTE_W);
+    uint32_t perm = PTE_U;//用户
+    if (vma->vm_flags & VM_WRITE) {//如果可写
+        perm |= (PTE_R | PTE_W);//可读可写
     }
-    addr = ROUNDDOWN(addr, PGSIZE);
+    addr = ROUNDDOWN(addr, PGSIZE); //向下取整
 
-    ret = -E_NO_MEM;
+    ret = -E_NO_MEM;//内存不足
 
     pte_t *ptep=NULL;
     /*
@@ -408,7 +424,23 @@ do_pgfault(struct mm_struct *mm, uint_t error_code, uintptr_t addr) {
     *   mm->pgdir : the PDT of these vma
     *
     */
-
+/*
+* 也许你需要帮助注释，下面的注释可以帮助你完成代码
+*
+* 一些有用的宏和定义，你可以在下面的实现中使用它们。
+* 宏或函数:
+*   get_pte : 获取一个 pte 并返回该 pte 的内核虚拟地址（pte：page table entry 页表项）
+*             如果 PT 包含的 pte 不存在，则为 PT 分配一个页面（注意第三个参数 '1'）
+*   pgdir_alloc_page : 调用 alloc_page 和 page_insert 函数来分配一个页面大小的内存并设置
+*             一个地址映射 pa<--->la 与线性地址 la 和 PDT pgdir
+* 定义:
+*   VM_WRITE  : 如果 vma->vm_flags & VM_WRITE == 1/0，则 vma 是可写/不可写的
+*   PTE_W           0x002                   // 页表/目录项标志位：可写
+*   PTE_U           0x004                   // 页表/目录项标志位：用户可访问
+* 变量:
+*   mm->pgdir : 这些 vma 的 PDT
+*
+*/
 
     ptep = get_pte(mm->pgdir, addr, 1);  //(1) try to find a pte, if pte's
                                          //PT(Page Table) isn't existed, then
@@ -431,6 +463,7 @@ do_pgfault(struct mm_struct *mm, uint_t error_code, uintptr_t addr) {
         *    page_insert ： 建立一个Page的phy addr与线性addr la的映射
         *    swap_map_swappable ： 设置页面可交换
         */
+
         if (swap_init_ok) {
             struct Page *page = NULL;
             // 你要编写的内容在这里，请基于上文说明以及下文的英文注释完成代码编写
@@ -442,7 +475,23 @@ do_pgfault(struct mm_struct *mm, uint_t error_code, uintptr_t addr) {
             //map of phy addr <--->
             //logical addr
             //(3) make the page swappable.
-            page->pra_vaddr = addr;
+
+            //（1）根据 mm 和 addr，尝试将正确的磁盘页的内容加载到 page 管理的内存中
+            
+            if (swap_in(mm, addr, &page) != 0) {
+                cprintf("swap_in in do_pgfault failed\n");
+                goto failed;
+            }
+            // （2）根据 mm、addr 和 page，设置物理地址和逻辑地址的映射
+            
+            if (page_insert(mm->pgdir, page, addr, perm) != 0) {
+                cprintf("page_insert in do_pgfault failed\n");
+                goto failed;
+            }
+            // 设置页面可交换
+            swap_map_swappable(mm, addr, page, 1);
+            
+            page->pra_vaddr = addr;//设置页面的虚拟地址
         } else {
             cprintf("no swap_init_ok but ptep is %x, failed\n", *ptep);
             goto failed;

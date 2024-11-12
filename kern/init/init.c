@@ -33,8 +33,9 @@ kern_init(void) {
     idt_init();                 // init interrupt descriptor table
 
     vmm_init();                 // init virtual memory management
+    cprintf("vmm_init()执行结束.\n");
 
-    ide_init();                 // init ide devices
+    ide_init();                 // init ide devices // 初始化 ide 设备
     swap_init();                // init swap
 
     clock_init();               // init clock interrupt

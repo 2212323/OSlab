@@ -112,25 +112,6 @@ _clock_swap_out_victim(struct mm_struct *mm, struct Page ** ptr_page, int in_tic
             }
         }
 
-        // curr_ptr = list_next(curr_ptr);
-        // if(curr_ptr == head) {
-        //     curr_ptr = list_next(curr_ptr);
-        //     if(curr_ptr == head) {
-        //         *ptr_page = NULL;
-        //         break;
-        //     }
-        // }
-        // struct Page* page = le2page(curr_ptr, pra_page_link);
-        // if(!page->visited) {
-        //     *ptr_page = page;
-        //     list_del(curr_ptr);
-        //     cprintf("curr_ptr %p\n",curr_ptr);
-        //     //curr_ptr = head;
-        //     break;
-        // } else {
-        //     page->visited = 0;
-        // }
-
     }
     return 0;
 }

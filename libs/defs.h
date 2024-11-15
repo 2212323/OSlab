@@ -37,14 +37,14 @@ typedef unsigned long long uint64_t;
   typedef int32_t sint_t;
   typedef uint32_t uint_t;
 #endif
-typedef sint_t intptr_t;
-typedef uint_t uintptr_t;
+typedef sint_t intptr_t;//有符号整型指针
+typedef uint_t uintptr_t;//无符号整型指针
 
 /* size_t is used for memory object sizes */
 typedef uintptr_t size_t;
 
 /* used for page numbers */
-typedef size_t ppn_t;
+typedef size_t ppn_t;//页号
 
 /* *
  * Rounding operations (efficient when n is a power of 2)

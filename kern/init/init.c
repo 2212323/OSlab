@@ -35,7 +35,10 @@ kern_init(void) {
     vmm_init();                 // init virtual memory management
     cprintf("vmm_init()执行结束.\n");
 
-    ide_init();                 // init ide devices // 初始化 ide 设备
+    ide_init();                 // init ide devices. 新增函数, 初始化"硬盘". 
+                                //其实这个函数啥也没做, 属于"历史遗留"
+
+
     swap_init();                // init swap
 
     clock_init();               // init clock interrupt

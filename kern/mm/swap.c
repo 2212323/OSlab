@@ -40,7 +40,11 @@ int swap_init(void)
           panic("bad max_swap_offset %08x.\n", max_swap_offset);
      }
 
+<<<<<<< HEAD
      sm = &swap_manager_clock; // use first in first out Page Replacement Algorithm
+=======
+     sm = &swap_manager_fifo; // use first in first out Page Replacement Algorithm
+>>>>>>> 792cbdc184dcb5c3954fc26fd78dfd7ea4d85ba1
      int r = sm->init();
 
      if (r == 0)
@@ -116,16 +120,17 @@ int swap_out(struct mm_struct *mm, int n, int in_tick)
      return i;
 }
 
+//加载磁盘中的交换页到内存中
 int swap_in(struct mm_struct *mm, uintptr_t addr, struct Page **ptr_result)
 {
-     struct Page *result = alloc_page();
+     struct Page *result = alloc_page();//分配一个内存页
      assert(result != NULL);
 
-     pte_t *ptep = get_pte(mm->pgdir, addr, 0);
+     pte_t *ptep = get_pte(mm->pgdir, addr, 0);//获取页表项
      // cprintf("SWAP: load ptep %x swap entry %d to vaddr 0x%08x, page %x, No %d\n", ptep, (*ptep)>>8, addr, result, (result-pages));
 
      int r;
-     if ((r = swapfs_read((*ptep), result)) != 0)
+     if ((r = swapfs_read((*ptep), result)) != 0)//读取磁盘中的交换页到内存中
      {
           assert(r != 0);
      }

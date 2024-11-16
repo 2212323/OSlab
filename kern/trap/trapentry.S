@@ -101,7 +101,7 @@ __alltraps:
     SAVE_ALL
 
     move  a0, sp
-    jal trap
+    jal trap  
     // sp should be the same as before "jal trap"
     .globl __trapret
 __trapret:

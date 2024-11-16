@@ -127,7 +127,7 @@ static inline void print_pgfault(struct trapframe *tf) {
 static int pgfault_handler(struct trapframe *tf) {
     extern struct mm_struct *check_mm_struct;
     print_pgfault(tf);
-    if (check_mm_struct != NULL) {
+    if (check_mm_struct != NULL) {//如果check_mm_struct不为空（这是一个mm_strut，）
         return do_pgfault(check_mm_struct, tf->cause, tf->badvaddr);//在vmm.c中，在此处调用do_pgfault
     }
     panic("unhandled page fault.\n");
@@ -270,9 +270,9 @@ void trap(struct trapframe *tf) {
     // dispatch based on what type of trap occurred
     if ((intptr_t)tf->cause < 0) {
         // interrupts
-        interrupt_handler(tf);
+        interrupt_handler(tf);//中断处理程序
     } else {
         // exceptions
-        exception_handler(tf);
+        exception_handler(tf);//异常处理程序
     }
 }

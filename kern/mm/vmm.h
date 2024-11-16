@@ -12,7 +12,7 @@ struct mm_struct;
 // the virtual continuous memory area(vma), [vm_start, vm_end), 
 // addr belong to a vma means  vma.vm_start<= addr <vma.vm_end 
 // 虚拟连续内存区域(vma)，[vm_start, vm_end)，地址属于一个vma意味着 vma.vm_start <= addr < vma.vm_end
-struct vma_struct {
+struct vma_struct {//vma_struct 代表一个虚拟内存区域（VMA）
     struct mm_struct *vm_mm; // the set of vma using the same PDT // 使用相同PDT的一组vma
     uintptr_t vm_start;      // start addr of vma      // vma的起始地址
     uintptr_t vm_end;        // end addr of vma, not include the vm_end itself // vma的结束地址，不包括vm_end本身

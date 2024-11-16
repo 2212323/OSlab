@@ -94,7 +94,7 @@ mm_create(void) {
         mm->pgdir = NULL;
         mm->map_count = 0;
 
-        if (swap_init_ok) swap_init_mm(mm);
+        if (swap_init_ok) swap_init_mm(mm);//初始化交换管理器
         else mm->sm_priv = NULL;
     }
     return mm;
@@ -121,13 +121,13 @@ struct vma_struct *
 find_vma(struct mm_struct *mm, uintptr_t addr) {
     struct vma_struct *vma = NULL;
     if (mm != NULL) {
-        vma = mm->mmap_cache;
-        if (!(vma != NULL && vma->vm_start <= addr && vma->vm_end > addr)) {
+        vma = mm->mmap_cache;//获取mm_struct的vma
+        if (!(vma != NULL && vma->vm_start <= addr && vma->vm_end > addr)) {//如果vma为空或者vma的范围里没有addr
                 bool found = 0;
-                list_entry_t *list = &(mm->mmap_list), *le = list;
-                while ((le = list_next(le)) != list) {
-                    vma = le2vma(le, list_link);
-                    if (vma->vm_start<=addr && addr < vma->vm_end) {
+                list_entry_t *list = &(mm->mmap_list), *le = list;//获取mm_struct的链表（按vma起始地址排序的线性链表链接）
+                while ((le = list_next(le)) != list) {//遍历链表
+                    vma = le2vma(le, list_link);    //list entry转vma
+                    if (vma->vm_start<=addr && addr < vma->vm_end) {    //如果vma的范围里有addr
                         found = 1;
                         break;
                     }
@@ -137,7 +137,7 @@ find_vma(struct mm_struct *mm, uintptr_t addr) {
                 }
         }
         if (vma != NULL) {
-            mm->mmap_cache = vma;
+            mm->mmap_cache = vma;//设置mm_struct中cche里的的vma
         }
     }
     return vma;
@@ -157,7 +157,7 @@ check_vma_overlap(struct vma_struct *prev, struct vma_struct *next) {
 // insert_vma_struct -insert vma in mm's list link
 // insert_vma_struct - 将 vma 插入 mm 的链表中
 void
-insert_vma_struct(struct mm_struct *mm, struct vma_struct *vma) {
+insert_vma_struct(struct mm_struct *mm, struct vma_struct *vma) {   //插入一个vma到mm_struct中
     assert(vma->vm_start < vma->vm_end);
     list_entry_t *list = &(mm->mmap_list);//获取mm_struct的链表
     list_entry_t *le_prev = list, *le_next;//前一个vma和后一个vma
@@ -165,7 +165,7 @@ insert_vma_struct(struct mm_struct *mm, struct vma_struct *vma) {
         list_entry_t *le = list;
         while ((le = list_next(le)) != list) {//遍历链表
             struct vma_struct *mmap_prev = le2vma(le, list_link);//list entry转vma
-            if (mmap_prev->vm_start > vma->vm_start) {
+            if (mmap_prev->vm_start > vma->vm_start) {//如果前一个vma的起始地址大于vma的起始地址（用于链表排序，链表以起始地址大小排序）
                 break;
             }
             le_prev = le;//前一个vma
@@ -175,15 +175,15 @@ insert_vma_struct(struct mm_struct *mm, struct vma_struct *vma) {
 
     /* check overlap */
     /* 检查重叠 */
-    if (le_prev != list) {
+    if (le_prev != list) {//如果前一个vma不是链表头
         check_vma_overlap(le2vma(le_prev, list_link), vma);//检查vma和前一个vma是否重叠
     }
-    if (le_next != list) {
-        check_vma_overlap(vma, le2vma(le_next, list_link));
+    if (le_next != list) {//如果后一个vma不是链表头
+        check_vma_overlap(vma, le2vma(le_next, list_link));//检查vma和后一个vma是否重叠
     }
 
-    vma->vm_mm = mm;
-    list_add_after(le_prev, &(vma->list_link));
+    vma->vm_mm = mm;//设置vma属于的mm_struct
+    list_add_after(le_prev, &(vma->list_link));//插入vma到mm_struct链表
 
     mm->map_count ++;
 }
@@ -193,9 +193,9 @@ insert_vma_struct(struct mm_struct *mm, struct vma_struct *vma) {
 void
 mm_destroy(struct mm_struct *mm) {
 
-    list_entry_t *list = &(mm->mmap_list), *le;
+    list_entry_t *list = &(mm->mmap_list), *le;//获取mm_struct的链表
     while ((le = list_next(list)) != list) {
-        list_del(le);
+        list_del(le);//删除链表
         kfree(le2vma(le, list_link),sizeof(struct vma_struct));  //kfree vma        
     }
     kfree(mm, sizeof(struct mm_struct)); //kfree mm
@@ -398,11 +398,11 @@ do_pgfault(struct mm_struct *mm, uint_t error_code, uintptr_t addr) {
      * THEN
      *    continue process
      */
-    uint32_t perm = PTE_U;//用户
-    if (vma->vm_flags & VM_WRITE) {//如果可写
+    uint32_t perm = PTE_U;//初始化权限为用户权限
+    if (vma->vm_flags & VM_WRITE) {//如果 VMA 可写，添加读写权限。
         perm |= (PTE_R | PTE_W);//可读可写
     }
-    addr = ROUNDDOWN(addr, PGSIZE); //向下取整
+    addr = ROUNDDOWN(addr, PGSIZE); //将地址向下取整到页边界
 
     ret = -E_NO_MEM;//内存不足
 
@@ -442,10 +442,9 @@ do_pgfault(struct mm_struct *mm, uint_t error_code, uintptr_t addr) {
 *
 */
 
-    ptep = get_pte(mm->pgdir, addr, 1);  //(1) try to find a pte, if pte's
-                                         //PT(Page Table) isn't existed, then
-                                         //create a PT.
-    if (*ptep == 0) {
+    ptep = get_pte(mm->pgdir, addr, 1);  //获取页表项，如果页表不存在则创建。
+                                        
+    if (*ptep == 0) {//创建一个新的页表
         if (pgdir_alloc_page(mm->pgdir, addr, perm) == NULL) {
             cprintf("pgdir_alloc_page in do_pgfault failed\n");
             goto failed;

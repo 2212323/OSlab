@@ -43,16 +43,16 @@ _lru_init_mm(struct mm_struct *mm)
 static int
 _lru_map_swappable(struct mm_struct *mm, uintptr_t addr, struct Page *page, int swap_in)
 {
-    list_entry_t *entry = &(page->pra_page_link);
+    list_entry_t *entry = &(page->pra_page_link);//获取页面链表
     assert(entry != NULL);
 
     // 如果页面已在链表中，先将其移除
-    if (list_find(&pra_list_head_lru, entry)) {
+    if (list_find(&pra_list_head_lru, entry)) {//如果页面在链表中
         list_del(entry);
     }
 
     // 将页面添加到链表尾部，表示最近使用
-    list_add_before(&pra_list_head_lru, entry);
+    list_add_before(&pra_list_head_lru, entry);//添加到链表尾部
     return 0;
 }
 
@@ -81,6 +81,7 @@ _lru_swap_out_victim(struct mm_struct *mm, struct Page **ptr_page, int in_tick)
 
 static int
 _lru_check_swap(void) {
+    cprintf("lru置换算法检查开始！！！.\n");
 #ifdef ucore_test
     int score = 0, totalscore = 5;
     cprintf("%d\n", &score);
@@ -140,10 +141,11 @@ _lru_check_swap(void) {
     assert(*(unsigned char *)0x1000 == 0x0a);
     *(unsigned char *)0x1000 = 0x0a;
     assert(pgfault_num==6);
+
+    cprintf("lru页面置换算法检查完毕！！！\n");
 #endif
     return 0;
 }
-
 
 static int
 _lru_init(void)

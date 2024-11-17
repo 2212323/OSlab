@@ -235,11 +235,74 @@ typedef uint64_t uintptr_t;
 
 好处和优势方面，可以减少页表项数量，使用较少的页表项来覆盖更大的地址空间，从而减少了页表的层级和页表项的数量，这可以显著减少页表的内存开销。而且还可以减少页表查找的层级，减少页表查找开销。
 
-
 坏处和风险方面，如果只使用了大页的一小部分，其余部分将被浪费。并且使用大页可能会导致内存碎片化问题，特别是在频繁分配和释放内存的情况下。这样会降低内存利用率，影响系统性能。因为它要求内存分配必须是大页的整数倍，灵活性不足。对于需要精细内存管理的应用场景可能不太适用。
 
 #### 扩展练习 Challenge：实现不考虑实现开销和效率的LRU页替换算法（需要编程）
 challenge部分不是必做部分，不过在正确最后会酌情加分。需写出有详细的设计、分析和测试的实验报告。完成出色的可获得适当加分。
+
+lru置换算法的精髓在于将未来最不可能用到的页面，即保留最近访问过的页面，并且淘汰最久没有被访问过的页面。实现重点在于，通过维护一个链表来记录页面的访问顺序，链表头部表示最久未使用的页面，链表尾部表示最近使用的页面。在每次访问新页面后，将此页面放入链表的尾部，若页面不在链表中，则将其插入到链表的尾部。对于换出页面，应选择链表头部的页面（即最久未使用的页面）进行换出。
+
+下面给出重要函数的实现
+
+初始化链表
+```cpp
+static int
+_lru_init_mm(struct mm_struct *mm)
+{
+    list_init(&pra_list_head_lru);
+    mm->sm_priv = &pra_list_head_lru;//指向页面链表
+    return 0;
+}
+```
+
+在`_lru_map_swappable`函数中将页面插入链表末尾，表示最近使用
+```cpp
+static int
+_lru_map_swappable(struct mm_struct *mm, uintptr_t addr, struct Page *page, int swap_in)
+{
+    list_entry_t *entry = &(page->pra_page_link);//获取页面链表
+    assert(entry != NULL);
+
+    // 如果页面已在链表中，先将其移除
+    if (list_find(&pra_list_head_lru, entry)) {//如果页面在链表中
+        list_del(entry);
+    }
+
+    // 将页面添加到链表尾部，表示最近使用
+    list_add_before(&pra_list_head_lru, entry);//添加到链表尾部
+    return 0;
+}
+```
+
+对于需要换出的页面,在`_lru_swap_out_victim`函数中,淘汰页面,即链表头部的页面
+```cpp
+static int
+_lru_swap_out_victim(struct mm_struct *mm, struct Page **ptr_page, int in_tick)
+{
+    list_entry_t *head = (list_entry_t *)mm->sm_priv;//获取页面链表
+    assert(head != NULL && !list_empty(head));
+
+    // 获取链表头部的页面，即最久未使用的页面
+    list_entry_t *victim = list_next(head);//获取链表头部,把链表头换出
+
+    // 获取对应的页面结构
+    struct Page *page = le2page(victim, pra_page_link);
+
+    // 将页面从链表中移除
+    list_del(victim);
+
+    // 返回该页面的地址以便进行替换
+    *ptr_page = page;
+    return 0;
+}
+```
+调用`list_del`函数,将页面从维护的链表中删除
+
+
+
+
+
+
 
 
 

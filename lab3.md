@@ -186,6 +186,93 @@ return &((pte_t *)KADDR(PDE_ADDR(*pdep0)))[PTX(la)];
  - 如果ucore的缺页服务例程在执行过程中访问内存，出现了页访问异常，请问硬件要做哪些事情？
 - 数据结构Page的全局变量（其实是一个数组）的每一项与页表中的页目录项和页表项有无对应关系？如果有，其对应关系是啥？
 
+
+函数调用图：trap--> trap_dispatch-->pgfault_handler-->do_pgfault
+
+在trapentry.S中，jal trap，然后trap-->exception_handle-->pgfault_handler-->do_pgfault
+
+##### *设计实现过程*
+
+1. swap_in(mm,addr,&page)函数
+   作用：从磁盘加载页面到内存中。
+   swap_in：根据 mm 和 addr，尝试将正确的磁盘页内容加载到内存中，并将其管理的页面指针返回。
+2. page_insert 函数
+  作用：将加载到内存中的页面插入到页表中，建立物理地址和虚拟地址的映射。
+3. swap_map_swappable 函数
+   作用：将页面标记为可交换的，并将其添加到交换管理器的管理中。
+
+
+##### *请描述页目录项（Page Directory Entry）和页表项（Page Table Entry）中组成部分对ucore实现页替换算法的潜在用处。*
+
+在
+`memlayout.h`文件中PDE和PTE是这样被定义的
+```cpp
+typedef uintptr_t pte_t;//页表项
+typedef uintptr_t pde_t;//页目录项
+```
+
+而`uintptr_t`是在文件`defs.h`这样定义的，为一个无符号64位整数，即unsigned long long
+```cpp
+/* *
+ * Pointers and addresses are 32 bits long.
+ * We use pointer types to represent addresses,
+ * uintptr_t to represent the numerical values of addresses.
+ * */
+typedef int64_t intptr_t;
+typedef uint64_t uintptr_t;
+```
++ 页目录项（PDE）
+    组成部分：
+  + P（Present）：表示该页目录项是否有效。如果为 0，表示该页目录项无效，访问该页会导致页错误。
+  + R/W（Read/Write）：表示该页是否可写。如果为 0，表示只读。
+  + U/S（User/Supervisor）：表示该页是否可以在用户模式下访问。如果为 0，表示只能在内核模式下访问。
+  + 地址：指向页表的物理地址。
+
+潜在的用处包括：
+1. 页替换：当需要替换一个页时，可以通过 PDE 找到对应的页表，并在页表中找到需要替换的页表项。
+2. 权限检查：在页替换过程中，可以通过 PDE 检查页的权限，确保替换后的页具有正确的访问权限，包括页面可读可写的权限检查，以及在何种模式（用户态/内核态）允许进行访问的检查
+
++ 页目录项（PDE）
+    组成部分：
+  + P（Present）：表示该页表项是否有效。如果为 0，表示该页表项无效，访问该页会导致页错误。
+  + R/W（Read/Write）：表示该页是否可写。如果为 0，表示只读。
+  + U/S（User/Supervisor）：表示该页是否可以在用户模式下访问。如果为 0，表示只能在内核模式下访问。
+  + 地址：指向物理页的物理地址。
+
+
+潜在的用处包括：
+1. 页替换：当需要替换一个页时，可以通过 PTE 找到对应的物理页，并将其换出到磁盘或换入到内存。
+2. 交换管理：PTE 可以用于标记页是否在交换区中，并在需要时从交换区加载页。
+3. 权限检查：在页替换过程中，可以通过 PTE 检查页的权限，确保替换后的页具有正确的访问权限。
+
+
+##### *如果 ucore 的缺页服务例程在执行过程中访问内存，出现了页访问异常，硬件要做哪些事情？*
+
+再遇见访问异常时，在trapentry.S中，jal trap，然后trap-->exception_handle，之后在exception_handle中，进入case CAUSE_LOAD_PAGE_FAULT或CAUSE_STORE_PAGE_FAULT，之后调用函数pgfault_handler-->do_pgfault
+
+1. 保存上下文：硬件会保存当前的 CPU 寄存器和状态，以便在处理完异常后能够恢复。
+2. 保存当前异常原因，根据stvec的地址跳转到中断处理程序trap函数，此函数在trap.c中。
+3. 之后如上面函数调用顺序，pgfault_handler-->do_pgfault，进入do_pgfault具体处理缺页异常。
+4. 若处理成功，则返回异常前状态，继续执行，否则输出unhandled page fault
+
+##### *数据结构 Page 的全局变量（其实是一个数组）的每一项与页表中的页目录项（PDE）和页表项（PTE）有无对应关系？如果有，其对应关系是啥？*
+
+存在对应关系
+
+三者的内容分别为：
++ Page 结构体：
+  + struct Page：表示一个物理页，包含物理页的相关信息，如引用计数、物理地址等。
+  + 全局变量：Page 结构体的全局变量是一个数组，每一项对应一个物理页。
++ 页表项（PTE）：
+  + 物理地址：PTE 中的物理地址字段指向一个物理页。这个物理页在 Page 结构体的全局变量数组中有一个对应的 Page 结构体。
+  + 映射关系：PTE 中的物理地址字段与 Page 结构体的物理地址字段相对应。
++ 页目录项（PDE）：
+  + **页表地址：PDE 中的地址字段指向一个页表。页表中的每一个 PTE 都指向一个物理页，这些物理页在 Page 结构体的全局变量数组中有对应的 Page 结构体。**
+
+简单来说，PDE中的地址字段-->页表，页表中包含的PTE的物理地址字段-->Page结构体
+三者为逐步包含的关系
+
+
 #### 练习4：补充完成Clock页替换算法（需要编程）
 通过之前的练习，相信大家对FIFO的页面替换算法有了更深入的了解，现在请在我们给出的框架上，填写代码，实现 Clock页替换算法（mm/swap_clock.c）。
 请在实验报告中简要说明你的设计实现过程。请回答如下问题：

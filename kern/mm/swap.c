@@ -40,11 +40,7 @@ int swap_init(void)
           panic("bad max_swap_offset %08x.\n", max_swap_offset);
      }
 
-<<<<<<< HEAD
      sm = &swap_manager_clock; // use first in first out Page Replacement Algorithm
-=======
-     sm = &swap_manager_fifo; // use first in first out Page Replacement Algorithm
->>>>>>> 792cbdc184dcb5c3954fc26fd78dfd7ea4d85ba1
      int r = sm->init();
 
      if (r == 0)
@@ -67,7 +63,7 @@ int swap_tick_event(struct mm_struct *mm)
      return sm->tick_event(mm);
 }
 
-int swap_map_swappable(struct mm_struct *mm, uintptr_t addr, struct Page *page, int swap_in)
+int swap_map_swappable(struct mm_struct *mm, uintptr_t addr, struct Page *page, int swap_in)//标记谁可以换出了，即符合了换出的要求，根据算法决定要求
 {
      return sm->map_swappable(mm, addr, page, swap_in);
 }
@@ -86,9 +82,9 @@ int swap_out(struct mm_struct *mm, int n, int in_tick)
      {
           uintptr_t v;
           // struct Page **ptr_page=NULL;
-          struct Page *page;
+          struct Page *page;//要换出的页
           // cprintf("i %d, SWAP: call swap_out_victim\n",i);
-          int r = sm->swap_out_victim(mm, &page, in_tick);
+          int r = sm->swap_out_victim(mm, &page, in_tick);//选择要换出的页
           if (r != 0)
           {
                cprintf("i %d, swap_out: call swap_out_victim failed\n", i);
@@ -99,23 +95,23 @@ int swap_out(struct mm_struct *mm, int n, int in_tick)
           // cprintf("SWAP: choose victim page 0x%08x\n", page);
 
           v = page->pra_vaddr;
-          pte_t *ptep = get_pte(mm->pgdir, v, 0);
-          assert((*ptep & PTE_V) != 0);
+          pte_t *ptep = get_pte(mm->pgdir, v, 0);//获取页表项
+          assert((*ptep & PTE_V) != 0);//确保页表项有效
 
-          if (swapfs_write((page->pra_vaddr / PGSIZE + 1) << 8, page) != 0)
+          if (swapfs_write((page->pra_vaddr / PGSIZE + 1) << 8, page) != 0)//将要换出的页写入磁盘
           {
                cprintf("SWAP: failed to save\n");
-               sm->map_swappable(mm, v, page, 0);
+               sm->map_swappable(mm, v, page, 0);//标记为不可换出
                continue;
           }
           else
           {
                cprintf("swap_out: i %d, store page in vaddr 0x%x to disk swap entry %d\n", i, v, page->pra_vaddr / PGSIZE + 1);
-               *ptep = (page->pra_vaddr / PGSIZE + 1) << 8;
+               *ptep = (page->pra_vaddr / PGSIZE + 1) << 8;//将页表项设置为交换条目
                free_page(page);
           }
 
-          tlb_invalidate(mm->pgdir, v);
+          tlb_invalidate(mm->pgdir, v);//使 TLB 条目无效
      }
      return i;
 }

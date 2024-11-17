@@ -204,8 +204,7 @@ return &((pte_t *)KADDR(PDE_ADDR(*pdep0)))[PTX(la)];
 
 ##### *请描述页目录项（Page Directory Entry）和页表项（Page Table Entry）中组成部分对ucore实现页替换算法的潜在用处。*
 
-在
-`memlayout.h`文件中PDE和PTE是这样被定义的
+在`memlayout.h`文件中PDE和PTE是这样被定义的
 ```cpp
 typedef uintptr_t pte_t;//页表项
 typedef uintptr_t pde_t;//页目录项
@@ -443,7 +442,9 @@ _lru_swap_out_victim(struct mm_struct *mm, struct Page **ptr_page, int in_tick)
     return 0;
 }
 ```
-调用`list_del`函数,将页面从维护的链表中删除
+通过调用`list_next(head)`获取链表头部的页面，即最久未使用的页面,而head通过mm->smpriv得到的
+
+通过调用`list_del`函数,将页面从维护的链表中删除
 
 
 

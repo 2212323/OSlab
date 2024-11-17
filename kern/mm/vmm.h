@@ -35,6 +35,10 @@ struct mm_struct {
     pde_t *pgdir;                  // the PDT of these vma // 这些vma的PDT
     int map_count;                 // the count of these vma // 这些vma的数量
     void *sm_priv;                   // the private data for swap manager // 交换管理器的私有数据
+    //sm_priv 是 mm_struct 结构体中的一个字段，用于存储与交换管理器（Swap Manager）相关的私有数据。
+    //这个字段通常用于在内存管理结构中保存与页面交换（paging/swapping）相关的特定信息，以便在需要时能够快速访问和操作这些数据。
+    //例如用于管理交换区的链表头、交换区的元数据等
+
 };
 
 struct vma_struct *find_vma(struct mm_struct *mm, uintptr_t addr); // 查找包含指定地址的vma

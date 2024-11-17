@@ -13,11 +13,11 @@
  * 在页面链表 pra_list_head_lru 中，链表头代表最久未使用的页面，链表尾代表最近访问的页面。
  */
 
-list_entry_t pra_list_head_lru;
+list_entry_t pra_list_head_lru;//页面链表
 
 int list_find(list_entry_t *head, list_entry_t *entry) {
-    list_entry_t *le = list_next(head);
-    while (le != head) {
+    list_entry_t *le = list_next(head);//获取链表头部
+    while (le != head) {//遍历链表
         if (le == entry) {
             return 1;  // 找到该节点
         }
@@ -33,7 +33,7 @@ static int
 _lru_init_mm(struct mm_struct *mm)
 {
     list_init(&pra_list_head_lru);
-    mm->sm_priv = &pra_list_head_lru;
+    mm->sm_priv = &pra_list_head_lru;//指向页面链表
     return 0;
 }
 
@@ -62,11 +62,11 @@ _lru_map_swappable(struct mm_struct *mm, uintptr_t addr, struct Page *page, int 
 static int
 _lru_swap_out_victim(struct mm_struct *mm, struct Page **ptr_page, int in_tick)
 {
-    list_entry_t *head = (list_entry_t *)mm->sm_priv;
+    list_entry_t *head = (list_entry_t *)mm->sm_priv;//获取页面链表
     assert(head != NULL && !list_empty(head));
 
     // 获取链表头部的页面，即最久未使用的页面
-    list_entry_t *victim = list_next(head);
+    list_entry_t *victim = list_next(head);//获取链表头部,把链表头换出
 
     // 获取对应的页面结构
     struct Page *page = le2page(victim, pra_page_link);

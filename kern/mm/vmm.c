@@ -381,6 +381,9 @@ volatile unsigned int pgfault_num=0;
  */
 int
 do_pgfault(struct mm_struct *mm, uint_t error_code, uintptr_t addr) {
+    //addr 参数表示导致页错误异常的虚拟地址。当 CPU 访问一个虚拟地址时，如果该地址没有映射到物理内存，或者访问权限不正确，就会触发页错误异常。
+    //addr 参数就是这个引起页错误的虚拟地址。
+    //缺页异常是指CPU访问的虚拟地址时， MMU没有办法找到对应的物理地址映射关系，或者与该物理页的访问权不一致而发生的异常。
     int ret = -E_INVAL; //无效参数
     //try to find a vma which include addr
     struct vma_struct *vma = find_vma(mm, addr);//尝试查找包含指定地址的vma
@@ -442,8 +445,9 @@ do_pgfault(struct mm_struct *mm, uint_t error_code, uintptr_t addr) {
 *
 */
 
-    ptep = get_pte(mm->pgdir, addr, 1);  //获取页表项，如果页表不存在则创建。
-                                        
+    ptep = get_pte(mm->pgdir, addr, 1);  //获取页表项，如果页表项不存在则创建（参数 1 ）。
+
+    //通过检查页表项的内容，可以确定页面是否已经存在于内存中。如果页表项的内容为 0，表示页面不存在，需要分配一个新的页面。                                   
     if (*ptep == 0) {//创建一个新的页表
         if (pgdir_alloc_page(mm->pgdir, addr, perm) == NULL) {
             cprintf("pgdir_alloc_page in do_pgfault failed\n");

@@ -59,11 +59,6 @@ CPU通过地址总线可以访问连接在地址总线上的所有外设，包�
 
 
 
-
-
-
-
-
 ## 练习3：给未被映射的地址映射上物理页（需要编程）
 *补充完成do_pgfault（mm/vmm.c）函数，给未被映射的地址映射上物理页。设置访问权限 的时候需要参考页面所在 VMA 的权限，同时需要注意映射物理页时需要操作内存控制 结构所指定的页表，而不是内核的页表。*
 *请在实验报告中简要说明你的设计实现过程。请回答如下问题：*
@@ -75,10 +70,58 @@ CPU通过地址总线可以访问连接在地址总线上的所有外设，包�
 
 在trapentry.S中，jal trap，然后trap-->exception_handle-->pgfault_handler-->do_pgfault
 
+
+
+`ptep = get_pte(mm->pgdir, addr, 1);` 获取页表项，如果未获取到，则创建一个，
+
+如果找到了，说明存在这个虚拟内存
+
+
+### 设计实现过程
+
+1. swap_in(mm,addr,&page)函数
+   作用：从磁盘加载页面到内存中。
+   swap_in：根据 mm 和 addr，尝试将正确的磁盘页内容加载到内存中，并将其管理的页面指针返回。
+2. page_insert 函数
+  作用：将加载到内存中的页面插入到页表中，建立物理地址和虚拟地址的映射。
+3. swap_map_swappable 函数
+   作用：将页面标记为可交换的，并将其添加到交换管理器的管理中。
+
+
+从磁盘加载页面：
+
+**当页表项指向的页面是一个交换条目**时，页面数据可能已经被换出到磁盘。
+需要调用 swap_in 函数，从磁盘加载页面数据到内存中。
+建立物理地址和虚拟地址的映射：
+
+加载到内存中的页面需要插入到页表中，以建立物理地址和虚拟地址的映射。
+需要调用 page_insert 函数，将页面插入到页表中，并设置相应的权限。
+标记页面为可交换：
+
+为了支持页面的换出和换入操作，需要将页面标记为可交换的，并将其添加到交换管理器的管理中。
+需要调用 swap_map_swappable 函数，将页面标记为可交换，并添加到交换管理器中。
+
+
+
+在
+`memlayout.h`文件中PDE和PTE是这样被定义的
+```cpp
+typedef uintptr_t pte_t;//页表项
+typedef uintptr_t pde_t;//页目录项
+```
+
+而`uintptr_t`是在文件`defs.h`这样定义的，为一个无符号64位整数，即unsigned long long
+```cpp
+/* *
+ * Pointers and addresses are 32 bits long.
+ * We use pointer types to represent addresses,
+ * uintptr_t to represent the numerical values of addresses.
+ * */
+typedef int64_t intptr_t;
+typedef uint64_t uintptr_t;
+```
+
 ### 页目录项（PDE）
-
-**Page Directory Entry 和 Page Table Entry 在哪？？？？？？？？？？？？？**
-
 
 组成部分：
 + P（Present）：表示该页目录项是否有效。如果为 0，表示该页目录项无效，访问该页会导致页错误。

@@ -183,6 +183,16 @@ proc_run(struct proc_struct *proc) {
         *   lcr3():                   修改 CR3 寄存器的值
         *   switch_to():              在两个进程之间进行上下文切换
         */
+
+       bool intr_flag;
+        struct proc_struct *prev = current, *next = proc;
+        local_intr_save(intr_flag);
+        {
+            current = proc;
+            lcr3(next->cr3);
+            switch_to(&(prev->context), &(next->context));
+        }
+        local_intr_restore(intr_flag);
     }
 }
 

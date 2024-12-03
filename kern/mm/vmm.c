@@ -381,7 +381,23 @@ do_pgfault(struct mm_struct *mm, uint32_t error_code, uintptr_t addr) {
             //map of phy addr <--->
             //logical addr
             //(3) make the page swappable.
-            page->pra_vaddr = addr;
+
+            //（1）根据 mm 和 addr，尝试将正确的磁盘页的内容加载到 page 管理的内存中
+            
+            if (swap_in(mm, addr, &page) != 0) {
+                cprintf("swap_in in do_pgfault failed\n");
+                goto failed;
+            }
+            // （2）根据 mm、addr 和 page，设置物理地址和逻辑地址的映射
+            
+            if (page_insert(mm->pgdir, page, addr, perm) != 0) {
+                cprintf("page_insert in do_pgfault failed\n");
+                goto failed;
+            }
+            // 设置页面可交换
+            swap_map_swappable(mm, addr, page, 1);
+            
+            page->pra_vaddr = addr;//设置页面的虚拟地址
         } else {
             cprintf("no swap_init_ok but ptep is %x, failed\n", *ptep);
             goto failed;

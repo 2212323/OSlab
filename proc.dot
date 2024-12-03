@@ -1,0 +1,13 @@
+digraph proc_init_call_graph {
+    rankdir=LR;
+    node [shape=box];
+
+    proc_init -> list_init [label="初始化列表"];
+    proc_init -> alloc_proc [label="分配进程"];
+    proc_init -> set_proc_name [label="设置进程名称 (idleproc)"];
+    proc_init -> kernel_thread [label="内核线程"];
+    proc_init -> find_proc [label="查找进程"];
+    proc_init -> set_proc_name [label="设置进程名称 (initproc)"];
+
+    kernel_thread -> do_fork [label="执行fork"];
+}

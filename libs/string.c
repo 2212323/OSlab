@@ -267,6 +267,14 @@ strtol(const char *s, char **endptr, int base) {
  *
  * The memset() function returns @s.
  * */
+/* *
+ * memset - 将指针 @s 所指向的内存区域的前 @n 个字节设置为指定的值 @c。
+ * @s:      指向要填充的内存区域的指针
+ * @c:      要设置的值
+ * @n:      要设置为该值的字节数
+ *
+ * memset() 函数返回 @s。
+ * */
 void *
 memset(void *s, char c, size_t n) {
 #ifdef __HAVE_ARCH_MEMSET
@@ -351,6 +359,18 @@ memcpy(void *dst, const void *src, size_t n) {
  *   match in both memory blocks has a greater value in @v1 than in @v2
  *   as if evaluated as unsigned char values;
  * - And a value less than zero indicates the opposite.
+ * */
+/* *
+ * memcmp - 比较两个内存块
+ * @v1:     指向内存块的指针
+ * @v2:     指向内存块的指针
+ * @n:      要比较的字节数
+ *
+ * memcmp() 函数返回一个整数值，指示内存块内容之间的关系：
+ * - 返回值为零表示两个内存块的内容相等；
+ * - 返回值大于零表示在两个内存块中，第一个不匹配的字节在 @v1 中的值大于 @v2 中的值，
+ *   就像是按无符号字符值进行比较一样；
+ * - 返回值小于零表示相反的情况。
  * */
 int
 memcmp(const void *v1, const void *v2, size_t n) {

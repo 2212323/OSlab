@@ -1,3 +1,4 @@
 obj/
 bin/
+.qemu.out
 .gdb.in

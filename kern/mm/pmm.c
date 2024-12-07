@@ -22,9 +22,9 @@ uint_t va_pa_offset;
 // memory starts at 0x80000000 in RISC-V
 const size_t nbase = DRAM_BASE / PGSIZE;
 
-// virtual address of boot-time page directory
+// virtual address of boot-time page directory  // boot_pgdir的虚拟地址
 pde_t *boot_pgdir = NULL;
-// physical address of boot-time page directory
+// physical address of boot-time page directory // boot_pgdir的物理地址
 uintptr_t boot_cr3;
 
 // physical memory management

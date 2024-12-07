@@ -39,11 +39,11 @@ struct pushregs {
 };
 
 struct trapframe {
-    struct pushregs gpr;
-    uintptr_t status;
-    uintptr_t epc;
-    uintptr_t badvaddr;
-    uintptr_t cause;
+    struct pushregs gpr;    //总共32个寄存器
+    uintptr_t status;    //状态寄存器
+    uintptr_t epc;  //程序计数器
+    uintptr_t badvaddr; //发生异常的地址
+    uintptr_t cause;    //异常原因
 };
 
 void trap(struct trapframe *tf);

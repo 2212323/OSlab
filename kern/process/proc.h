@@ -16,8 +16,8 @@ enum proc_state {
 };
 
 struct context {
-    uintptr_t ra;
-    uintptr_t sp;
+    uintptr_t ra;   //存储进程切换时，切换回来的地址
+    uintptr_t sp;   //存储进程切换时，切换回来的栈指针
     uintptr_t s0;
     uintptr_t s1;
     uintptr_t s2;

@@ -118,7 +118,7 @@ alloc_proc(void) {
 
     }
     return proc;
-    
+
 }
 
 // set_proc_name - set the name of proc
@@ -203,7 +203,7 @@ proc_run(struct proc_struct *proc) {
         {
             current = proc;
             lcr3(next->cr3);
-            switch_to(&(prev->context), &(next->context));
+            switch_to(&(prev->context), &(next->context));//
         }
         local_intr_restore(intr_flag);
     }
@@ -217,7 +217,7 @@ forkret(void) {
     forkrets(current->tf);
 }
 
-// hash_proc - add proc into proc hash_list
+// hash_proc - add proc into proc hash_list //将进程添加到进程哈希表
 static void
 hash_proc(struct proc_struct *proc) {
     list_add(hash_list + pid_hashfn(proc->pid), &(proc->hash_link));
@@ -259,7 +259,8 @@ static int
 setup_kstack(struct proc_struct *proc) {
     struct Page *page = alloc_pages(KSTACKPAGE);
     if (page != NULL) {
-        proc->kstack = (uintptr_t)page2kva(page);
+        //将内核虚拟地址保存到进程控制块（proc_struct）的 kstack 字段中。
+        proc->kstack = (uintptr_t)page2kva(page);//调用 page2kva 函数将页面结构体指针转换为内核虚拟地址
         return 0;
     }
     return -E_NO_MEM;

@@ -9,11 +9,53 @@ alloc_proc函数（位于kern/process/proc.c中）负责分配并返回一个新
 
     请说明proc_struct中struct context context和struct trapframe *tf成员变量含义和在本实验中的作用是啥？（提示通过看代码和编程调试可以判断出来）
 
-成员变量含义和作用：
 
-+ struct context context：保存进程执行的上下文，也就是关键的几个寄存器的值。用于进程切换中还原之前的运行状态。在通过proc_run切换到CPU上运行时，需要调用switch_to将原进程的寄存器保存，以便下次切换回去时读出，保持之前的状态。
+### 设计实现过程
+
+根据进程控制块的结构体，以及其成员变量之间的含义
+```c
+//进程控制块
+struct proc_struct {
+    enum proc_state state;                      // Process state        //进程状态
+    int pid;                                    // Process ID
+    int runs;                                   // the running times of Proces      //记录进程被调度运行的次数。
+    uintptr_t kstack;                           // Process kernel stack     //进程内核栈  //指向进程的内核栈的指针（无符号整数类型）
+    volatile bool need_resched;                 // bool value: need to be rescheduled to release CPU?       //是否需要重新调度
+    struct proc_struct *parent;                 // the parent process       //父进程
+    struct mm_struct *mm;                       // Process's memory management field        //进程的内存管理结构
+    struct context context;                     // Switch here to run process       //进程上下文
+    struct trapframe *tf;                       // Trap frame for current interrupt     //当前中断的陷阱帧
+    uintptr_t cr3;                              // CR3 register: the base addr of Page Directroy Table(PDT)      //CR3寄存器：页目录表的基地址
+    uint32_t flags;                             // Process flag      //进程标志
+    char name[PROC_NAME_LEN + 1];               // Process name     //进程名
+    list_entry_t list_link;                     // Process link list        //进程链表
+    list_entry_t hash_link;                     // Process hash list        //进程哈希表
+};
+```
+
+我们可以对其进行初始化
+
+```c
+proc->state = PROC_UNINIT;//将进程初始化为 未初始化状态
+    proc->pid = -1;
+    proc->runs = 0;
+    proc->kstack = 0;
+    proc->need_resched = 0; //bool值：需要重新调度以释放CPU？
+    proc->parent = NULL;
+    proc->mm = NULL;
+    memset(&(proc->context), 0, sizeof(struct context));//使用 memset 将 context 结构体的所有字段初始化为 0。
+    proc->tf = NULL;
+    proc->cr3 = boot_cr3;//boot_cr3 是 boot_pgdir的物理地址
+    proc->flags = 0;    //保存进程的标志信息，用于记录进程的特定属性或状态。（无符号整数类型）
+    memset(proc->name, 0, PROC_NAME_LEN + 1);//使用 memset 将 name 字符数组的所有元素初始化为 0。
+```
+其中pid由于需要标识唯一进程，需要设为-1，因为其从0开始
+
+### 成员变量含义和在本实验中的作用：
+
++ struct context context：保存进程执行的上下文，也就是关键的几个寄存器的值。在进程切换时，操作系统需要保存当前进程的寄存器状态，并从新进程的 context 结构中恢复寄存器状态。在通过proc_run切换到CPU上运行时，需要调用switch_to进行进程切换，将将当前进程的寄存器状态保存到 context 结构中，并从新进程的 context 结构中恢复寄存器状态，以便下次切换回去时能够继续之前的运行状态。
   
-+ struct trapframe *tf：保存了进程的中断帧（32个通用寄存器、异常相关的寄存器）。在进程从用户空间跳转到内核空间时，系统调用会改变寄存器的值。我们可以通过调整中断帧来使的系统调用返回特定的值。比如可以利用s0和s1传递线程执行的函数和参数；在创建子线程时，会将中断帧中的a0设为0。
++ struct trapframe *tf：用于保存进程的中断帧信息，包括32个通用寄存器、异常相关的寄存器。当进程从用户空间跳转到内核空间时，中断或系统调用会改变寄存器的值。我们可以通过调整中断帧来使的系统调用返回特定的值。比如可以利用s0和s1传递线程执行的函数和参数；在创建子线程时，会将中断帧中的a0设为0。
 
 中断处理：当中断或异常发生时，CPU 会自动保存当前的寄存器状态到陷阱帧（trapframe）中。操作系统可以通过 tf 成员变量访问这些信息，以便处理中断或异常。
 
@@ -26,8 +68,6 @@ static void forkret(void) {
 }
 ```
 forkrets(current->tf)：在新进程第一次运行时，恢复陷阱帧 tf 中保存的寄存器状态。
-
-
 
 ```c
 struct trapframe {
@@ -71,6 +111,115 @@ proc_run用于将指定的进程切换到CPU上运行。它的大致执行步骤
 
 如果可以得到如 附录A所示的显示内容（仅供参考，不是标准答案输出），则基本正确。
 
+
+### 代码实现
+
+```c
+void
+proc_run(struct proc_struct *proc) {
+    if (proc != current) {      
+       bool intr_flag;
+        struct proc_struct *prev = current, *next = proc;
+        local_intr_save(intr_flag);
+        {
+            current = proc;
+            lcr3(next->cr3);
+            switch_to(&(prev->context), &(next->context));
+        }
+        local_intr_restore(intr_flag);
+    }
+}
+```
+
+
+1. **进程比较**：
+   ```c
+   if (proc != current) {
+   ```
+   首先，函数检查传入的目标进程 `proc` 是否与当前正在运行的进程 `current` 不同。如果相同，则无需进行任何操作，直接返回；如果不同，则需要进行进程切换。
+
+2. **中断处理**：
+   ```c
+   bool intr_flag;
+   local_intr_save(intr_flag);
+   ```
+   使用 `local_intr_save` 宏（或函数）禁用中断，并保存当前的中断状态到 `intr_flag` 变量中。这是为了防止在进程切换过程中发生中断，确保切换操作的原子性和一致性。
+
+3. **保存当前和目标进程**：
+   ```c
+   struct proc_struct *prev = current, *next = proc;
+   ```
+   定义两个指针 `prev` 和 `next`，分别指向当前进程和目标进程。这有助于后续的上下文切换操作。
+
+4. **更新当前进程**：
+   ```c
+   current = proc;
+   ```
+   将全局变量 `current` 更新为目标进程 `proc`，表示当前运行的进程已经切换为目标进程。
+
+5. **修改 CR3 寄存器**：
+   ```c
+   lcr3(next->cr3);
+   ```
+   使用 `lcr3` 函数修改 CR3 寄存器的值。CR3 寄存器保存了当前进程的页目录基址，修改它意味着切换到目标进程的虚拟地址空间。
+
+6. **上下文切换**：
+   ```c
+   switch_to(&(prev->context), &(next->context));
+   ```
+   调用 `switch_to` 函数，传入前一个进程和目标进程的上下文结构体指针。`switch_to` 负责保存前一个进程的上下文（如寄存器状态）并恢复目标进程的上下文，从而实现实际的上下文切换。
+
+7. **恢复中断状态**：
+   ```c
+   local_intr_restore(intr_flag);
+   ```
+   使用 `local_intr_restore` 宏（或函数）恢复之前保存的中断状态。这确保了在进程切换完成后，中断状态与切换前保持一致，系统可以继续正常响应中断。
+
+### 在本实验的执行过程中，创建且运行了几个内核线程？
+2个，分别为idle和init线程。
+
 ## 扩展练习 Challenge：
 + 说明语句local_intr_save(intr_flag);....local_intr_restore(intr_flag);是如何实现开关中断的？
 
+### 宏的定义
+
+```c
+#define local_intr_save(x) \
+    do {                   \
+        x = __intr_save(); \
+    } while (0)
+
+#define local_intr_restore(x) __intr_restore(x);
+```
+
+### 工作原理
+
+1. **禁用中断并保存状态**：
+   
+   ```c
+   bool intr_flag;
+   local_intr_save(intr_flag);
+   ```
+   
+   - **`local_intr_save(intr_flag);`**：
+     - 调用 `__intr_save()` 函数。
+     - `__intr_save()` 检查当前中断是否启用。
+     - 如果中断是启用的，禁用中断并返回 `true`。
+     - 如果中断已经禁用，返回 `false`。
+     - 结果保存在 `intr_flag` 变量中，记录之前的中断状态。
+
+3. **恢复中断状态**：
+
+   ```c
+   local_intr_restore(intr_flag);
+   ```
+   
+   - **`local_intr_restore(intr_flag);`**：
+     - 调用 `__intr_restore(intr_flag)` 函数。
+     - 如果 `intr_flag` 是 `true`，表示之前中断是启用的，则重新启用中断。
+     - 如果 `intr_flag` 是 `false`，表示之前中断已经禁用，则保持中断禁用状态。
+
+### 总结
+
+- **`local_intr_save(intr_flag);`**：检查当前中断状态，如果中断是开启的，就禁用中断并记录状态。
+- **`local_intr_restore(intr_flag);`**：根据之前记录的状态，恢复中断的开启或保持禁用。

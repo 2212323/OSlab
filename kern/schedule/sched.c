@@ -36,5 +36,4 @@ schedule(void) {
             proc_run(next); // 切换到下一个进程运行
         }
     }
-    local_intr_restore(intr_flag); // 恢复中断状态
-}
+    local_intr_restore(intr_flag); // 恢复中断6

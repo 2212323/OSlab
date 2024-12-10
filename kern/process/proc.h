@@ -7,12 +7,12 @@
 #include <memlayout.h>
 
 
-// process's state in his life cycle
+// process's state in his life cycle 进程生命周期中的状态
 enum proc_state {
-    PROC_UNINIT = 0,  // uninitialized
-    PROC_SLEEPING,    // sleeping
-    PROC_RUNNABLE,    // runnable(maybe running)
-    PROC_ZOMBIE,      // almost dead, and wait parent proc to reclaim his resource
+    PROC_UNINIT = 0,  // uninitialized 未初始化
+    PROC_SLEEPING,    // sleeping 睡眠
+    PROC_RUNNABLE,    // runnable(maybe running) 可运行（可能正在运行）
+    PROC_ZOMBIE,      // almost dead, and wait parent proc to reclaim his resource 几乎死亡，等待父进程回收其资源
 };
 
 struct context {
@@ -39,20 +39,20 @@ struct context {
 extern list_entry_t proc_list;
 
 struct proc_struct {
-    enum proc_state state;                      // Process state
-    int pid;                                    // Process ID
-    int runs;                                   // the running times of Proces
-    uintptr_t kstack;                           // Process kernel stack
-    volatile bool need_resched;                 // bool value: need to be rescheduled to release CPU?
-    struct proc_struct *parent;                 // the parent process
-    struct mm_struct *mm;                       // Process's memory management field
-    struct context context;                     // Switch here to run process
-    struct trapframe *tf;                       // Trap frame for current interrupt
-    uintptr_t cr3;                              // CR3 register: the base addr of Page Directroy Table(PDT)
-    uint32_t flags;                             // Process flag
-    char name[PROC_NAME_LEN + 1];               // Process name
-    list_entry_t list_link;                     // Process link list 
-    list_entry_t hash_link;                     // Process hash list
+    enum proc_state state;                      // Process state 进程状态
+    int pid;                                    // Process ID 进程ID
+    int runs;                                   // the running times of Process 进程运行次数
+    uintptr_t kstack;                           // Process kernel stack 进程内核栈
+    volatile bool need_resched;                 // bool value: need to be rescheduled to release CPU? 是否需要重新调度以释放CPU
+    struct proc_struct *parent;                 // the parent process 父进程
+    struct mm_struct *mm;                       // Process's memory management field 进程的内存管理字段
+    struct context context;                     // Switch here to run process 切换到此处运行进程
+    struct trapframe *tf;                       // Trap frame for current interrupt 当前中断的陷阱帧
+    uintptr_t cr3;                              // CR3 register: the base addr of Page Directory Table(PDT) CR3寄存器：页目录表的基地址
+    uint32_t flags;                             // Process flag 进程标志
+    char name[PROC_NAME_LEN + 1];               // Process name 进程名称
+    list_entry_t list_link;                     // Process link list 进程链表
+    list_entry_t hash_link;                     // Process hash list 进程哈希链表
 };
 
 #define le2proc(le, member)         \

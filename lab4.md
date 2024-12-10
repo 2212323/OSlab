@@ -30,6 +30,70 @@ alloc_proc函数（位于kern/process/proc.c中）负责分配并返回一个新
 请在实验报告中简要说明你的设计实现过程。请回答如下问题：
 
 请说明ucore是否做到给每个新fork的线程一个唯一的id？请说明你的分析和理由。
+
+在 `ucore` 中，`get_pid` 函数用于为每个新创建的进程分配一个唯一的进程ID (pid)。通过分析 `get_pid` 函数的实现，可以确定 `ucore` 是否能够为每个新 fork 的线程分配一个唯一的 id。
+
+在 `get_pid` 函数中维护了两个静态变量，`last_pid`与`next_safe`,`last_pid`用于分配pid,`next_safe`用于跟踪当前进程列表中未被使用且大于 `last_pid` 的最小 pid.
+
+1. **初始化和递增 `last_pid`**：
+   ```c
+   if (++last_pid >= MAX_PID) {
+       last_pid = 1;
+       goto inside;
+   }
+   ```
+   - 每次调用 `get_pid` 时，首先递增 `last_pid`。
+   - 如果 `last_pid` 超过 `MAX_PID`，则重置为 1。
+
+   如果没超过并且这时候`last_pid`安全的话，直接返回`last_pid`。
+   否则开始遍历进程链表：
+
+
+   ```c
+   if (last_pid >= next_safe) {
+   inside:
+       next_safe = MAX_PID;
+   repeat:
+       le = list;
+       while ((le = list_next(le)) != list) {
+           proc = le2proc(le, list_link);
+           if (proc->pid == last_pid) {
+               if (++last_pid >= next_safe) {
+                   if (last_pid >= MAX_PID) {
+                       last_pid = 1;
+                   }
+                   next_safe = MAX_PID;
+                   goto repeat;
+               }
+           }
+           else if (proc->pid > last_pid && next_safe > proc->pid) {
+               next_safe = proc->pid;
+           }
+       }
+   }
+   ```
+   - 如果 `last_pid` 超过 `next_safe`，则重置 `next_safe` 为 `MAX_PID` 并重新开始检查。
+   - 遍历进程列表，检查每个进程的 pid。
+   - 如果发现某个进程的 pid 与 `last_pid` 相同，则递增 `last_pid` 并重新开始检查。
+   - 如果发现某个进程的 pid 大于 `last_pid` 且小于 `next_safe`，则更新 `next_safe`。
+
+最后返回唯一的pid：
+   ```c
+   return last_pid;
+   ```
+
+
+通过上述分析，可以得出以下结论：
+
+- `get_pid` 函数通过递增 `last_pid` 并检查进程列表中的 pid，确保每次分配的 pid 都是唯一的。
+- 如果 `last_pid` 已经被使用，则递增 `last_pid` 并继续检查，直到找到一个未被使用的 pid。
+- `next_safe` 用于跟踪当前进程列表中未被使用且大于 `last_pid` 的最小 pid，确保 `last_pid` 是安全的。
+
+因此，`ucore` 能够为每个新 fork 的线程分配一个唯一的 id。通过遍历进程列表并检查每个进程的 pid，`get_pid` 函数能够找到一个未被使用的 pid 并返回，从而确保每个新创建的进程或线程都有一个唯一的 pid。
+
+
+
+
 # 练习3：编写proc_run 函数（需要编码）
 proc_run用于将指定的进程切换到CPU上运行。它的大致执行步骤包括：
 

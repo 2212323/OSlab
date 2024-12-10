@@ -10,4 +10,15 @@ digraph proc_init_call_graph {
     proc_init -> set_proc_name [label="设置进程名称 (initproc)"];
 
     kernel_thread -> do_fork [label="执行fork"];
+
+    do_fork -> copy_thread [label="复制线程"];
+    do_fork -> alloc_proc [label="分配进程"];
+    do_fork -> setup_kstack [label="设置内核栈"];
+    do_fork -> copy_mm [label="复制内存管理"];
+    do_fork -> get_pid [label="获取进程ID"];
+    do_fork -> hash_proc [label="哈希进程"];
+    do_fork -> list_add [label="添加到列表"];
+    do_fork -> wakeup_proc [label="唤醒进程"];
+    do_fork -> put_kstack [label="释放内核栈"];
+    do_fork -> kfree [label="释放内存"];
 }

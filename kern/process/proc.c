@@ -135,25 +135,38 @@ get_proc_name(struct proc_struct *proc) {
     return memcpy(name, proc->name, PROC_NAME_LEN);
 }
 
+/**
+ * get_pid - 分配一个唯一的进程ID (pid)
+ *
+ * 该函数通过遍历进程列表，分配一个唯一的pid给新进程。pid的范围在1到MAX_PID之间。
+ * 如果当前pid已经被使用，则递增pid直到找到一个未被使用的pid。
+ *
+ * 返回值:
+ *   返回一个唯一的pid。
+ *
+ * 注意:
+ *   - MAX_PID 必须大于 MAX_PROCESS。
+ *   - 该函数假设进程列表是一个循环链表。
+ */
 // get_pid - alloc a unique pid for process
 static int
 get_pid(void) {
-    static_assert(MAX_PID > MAX_PROCESS);
+    static_assert(MAX_PID > MAX_PROCESS); // 确保 MAX_PID 大于 MAX_PROCESS
     struct proc_struct *proc;
     list_entry_t *list = &proc_list, *le;
     static int next_safe = MAX_PID, last_pid = MAX_PID;
-    if (++ last_pid >= MAX_PID) {
+    if (++ last_pid >= MAX_PID) { // 如果 last_pid 超过 MAX_PID，则重置为 1
         last_pid = 1;
         goto inside;
     }
-    if (last_pid >= next_safe) {
+    if (last_pid >= next_safe) { // 如果 last_pid 超过 next_safe，则重置 next_safe
     inside:
         next_safe = MAX_PID;
     repeat:
         le = list;
-        while ((le = list_next(le)) != list) {
+        while ((le = list_next(le)) != list) { // 遍历进程列表
             proc = le2proc(le, list_link);
-            if (proc->pid == last_pid) {
+            if (proc->pid == last_pid) { // 如果 pid 已被使用，则递增 last_pid
                 if (++ last_pid >= next_safe) {
                     if (last_pid >= MAX_PID) {
                         last_pid = 1;
@@ -162,12 +175,12 @@ get_pid(void) {
                     goto repeat;
                 }
             }
-            else if (proc->pid > last_pid && next_safe > proc->pid) {
+            else if (proc->pid > last_pid && next_safe > proc->pid) { // 更新 next_safe
                 next_safe = proc->pid;
             }
         }
     }
-    return last_pid;
+    return last_pid; // 返回唯一的 pid
 }
 
 // proc_run - make process "proc" running on cpu
@@ -211,6 +224,9 @@ proc_run(struct proc_struct *proc) {
 // forkret -- the first kernel entry point of a new thread/process
 // NOTE: the addr of forkret is setted in copy_thread function
 //       after switch_to, the current proc will execute here.
+// forkret -- 新线程/进程的第一个内核入口点
+// 注意: forkret 的地址在 copy_thread 函数中设置
+//       在 switch_to 之后，当前进程将在这里执行。
 static void
 forkret(void) {
     forkrets(current->tf);
@@ -254,6 +270,7 @@ kernel_thread(int (*fn)(void *), void *arg, uint32_t clone_flags) {
 }
 
 // setup_kstack - alloc pages with size KSTACKPAGE as process kernel stack
+// setup_kstack - 分配大小为 KSTACKPAGE 的页面作为进程内核栈
 static int
 setup_kstack(struct proc_struct *proc) {
     struct Page *page = alloc_pages(KSTACKPAGE);
@@ -272,6 +289,8 @@ put_kstack(struct proc_struct *proc) {
 
 // copy_mm - process "proc" duplicate OR share process "current"'s mm according clone_flags
 //         - if clone_flags & CLONE_VM, then "share" ; else "duplicate"
+// copy_mm - 根据 clone_flags，进程 "proc" 复制或共享进程 "current" 的内存管理结构
+//         - 如果 clone_flags & CLONE_VM，则 "共享"；否则 "复制"
 static int
 copy_mm(uint32_t clone_flags, struct proc_struct *proc) {
     assert(current->mm == NULL);
@@ -281,6 +300,16 @@ copy_mm(uint32_t clone_flags, struct proc_struct *proc) {
 
 // copy_thread - setup the trapframe on the  process's kernel stack top and
 //             - setup the kernel entry point and stack of process
+// copy_thread - 在进程的内核栈顶设置陷阱帧
+//             - 设置进程的内核入口点和栈
+/**
+ * 复制进程
+ * @param proc: 被复制的进程
+ * @param esp: 新进程的栈指针
+ * @param tf: 陷阱帧信息
+ * @return void
+ * 
+ */
 static void
 copy_thread(struct proc_struct *proc, uintptr_t esp, struct trapframe *tf) {
     proc->tf = (struct trapframe *)(proc->kstack + KSTACKSIZE - sizeof(struct trapframe));

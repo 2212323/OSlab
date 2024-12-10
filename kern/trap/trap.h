@@ -38,6 +38,13 @@ struct pushregs {
     uintptr_t t6;    // Temporary
 };
 
+// 结构体 trapframe 表示陷阱帧，用于保存陷阱发生时的寄存器状态
+// 成员:
+// - gpr: 通用寄存器组 (general purpose registers)
+// - status: 保存当前的状态寄存器值
+// - epc: 保存异常程序计数器 (Exception Program Counter) 的值
+// - badvaddr: 保存导致异常的虚拟地址 (Bad Virtual Address)
+// - cause: 保存导致异常的原因 (Cause Register)
 struct trapframe {
     struct pushregs gpr;
     uintptr_t status;

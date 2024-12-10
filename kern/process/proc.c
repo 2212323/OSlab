@@ -88,18 +88,6 @@ alloc_proc(void) {
     struct proc_struct *proc = kmalloc(sizeof(struct proc_struct));
     if (proc != NULL) {
 
-    proc->state = PROC_UNINIT;//将进程初始化为 未初始化状态
-    proc->pid = -1;
-    proc->runs = 0;
-    proc->kstack = 0;
-    proc->need_resched = 0; //bool值：需要重新调度以释放CPU？
-    proc->parent = NULL;
-    proc->mm = NULL;
-    memset(&(proc->context), 0, sizeof(struct context));//使用 memset 将 context 结构体的所有字段初始化为 0。
-    proc->tf = NULL;
-    proc->cr3 = boot_cr3;//boot_cr3 是 boot_pgdir的物理地址
-    proc->flags = 0;    //保存进程的标志信息，用于记录进程的特定属性或状态。（无符号整数类型）
-    memset(proc->name, 0, PROC_NAME_LEN + 1);//使用 memset 将 name 字符数组的所有元素初始化为 0。
     //LAB4:EXERCISE1 YOUR CODE
     /*
      * below fields in proc_struct need to be initialized
@@ -116,6 +104,20 @@ alloc_proc(void) {
      *       uint32_t flags;                             // Process flag
      *       char name[PROC_NAME_LEN + 1];               // Process name
      */
+     proc->state = PROC_UNINIT;//将进程初始化为 未初始化状态
+    proc->pid = -1;
+    proc->runs = 0;
+    proc->kstack = 0;
+    proc->need_resched = 0; //bool值：需要重新调度以释放CPU？
+    proc->parent = NULL;
+    proc->mm = NULL;
+    memset(&(proc->context), 0, sizeof(struct context));//使用 memset 将 context 结构体的所有字段初始化为 0。
+    proc->tf = NULL;
+    proc->cr3 = boot_cr3;//boot_cr3 是 boot_pgdir的物理地址
+    proc->flags = 0;    //保存进程的标志信息，用于记录进程的特定属性或状态。（无符号整数类型）
+    memset(proc->name, 0, PROC_NAME_LEN + 1);//使用 memset 将 name 字符数组的所有元素初始化为 0。
+
+
 
      //LAB5 YOUR CODE : (update LAB4 steps)
      /*
@@ -123,6 +125,12 @@ alloc_proc(void) {
      *       uint32_t wait_state;                        // waiting state
      *       struct proc_struct *cptr, *yptr, *optr;     // relations between processes
      */
+
+    proc->wait_state = 0;
+    proc->cptr = NULL;
+    proc->yptr = NULL;
+    proc->optr = NULL;
+
     }
     return proc;
 }
@@ -638,6 +646,12 @@ load_icode(unsigned char *binary, size_t size) {
      *          tf->status should be appropriate for user program (the value of sstatus)
      *          hint: check meaning of SPP, SPIE in SSTATUS, use them by SSTATUS_SPP, SSTATUS_SPIE(defined in risv.h)
      */
+    tf->gpr.sp = USTACKTOP;
+    tf->epc = elf->e_entry;
+    // sstatus &= ~SSTATUS_SPP;
+    // sstatus &= SSTATUS_SPIE;
+    // tf->status = sstatus;
+    tf->status = sstatus & ~(SSTATUS_SPP | SSTATUS_SPIE);
 
 
     ret = 0;

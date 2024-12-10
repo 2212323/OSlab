@@ -16,8 +16,8 @@ enum proc_state {
 };
 
 struct context {
-    uintptr_t ra;
-    uintptr_t sp;
+    uintptr_t ra;   //存储进程切换时，切换回来的地址
+    uintptr_t sp;   //存储进程切换时，切换回来的栈指针
     uintptr_t s0;
     uintptr_t s1;
     uintptr_t s2;
@@ -38,21 +38,22 @@ struct context {
 
 extern list_entry_t proc_list;
 
+//进程控制块
 struct proc_struct {
-    enum proc_state state;                      // Process state 进程状态
-    int pid;                                    // Process ID 进程ID
-    int runs;                                   // the running times of Process 进程运行次数
-    uintptr_t kstack;                           // Process kernel stack 进程内核栈
-    volatile bool need_resched;                 // bool value: need to be rescheduled to release CPU? 是否需要重新调度以释放CPU
-    struct proc_struct *parent;                 // the parent process 父进程
-    struct mm_struct *mm;                       // Process's memory management field 进程的内存管理字段
-    struct context context;                     // Switch here to run process 切换到此处运行进程
-    struct trapframe *tf;                       // Trap frame for current interrupt 当前中断的陷阱帧
-    uintptr_t cr3;                              // CR3 register: the base addr of Page Directory Table(PDT) CR3寄存器：页目录表的基地址
-    uint32_t flags;                             // Process flag 进程标志
-    char name[PROC_NAME_LEN + 1];               // Process name 进程名称
-    list_entry_t list_link;                     // Process link list 进程链表
-    list_entry_t hash_link;                     // Process hash list 进程哈希链表
+    enum proc_state state;                      // Process state        //进程状态
+    int pid;                                    // Process ID
+    int runs;                                   // the running times of Proces      //记录进程被调度运行的次数。
+    uintptr_t kstack;                           // Process kernel stack     //进程内核栈  //指向进程的内核栈的指针（无符号整数类型）
+    volatile bool need_resched;                 // bool value: need to be rescheduled to release CPU?       //是否需要重新调度
+    struct proc_struct *parent;                 // the parent process       //父进程
+    struct mm_struct *mm;                       // Process's memory management field        //进程的内存管理结构
+    struct context context;                     // Switch here to run process       //进程上下文
+    struct trapframe *tf;                       // Trap frame for current interrupt     //当前中断的陷阱帧
+    uintptr_t cr3;                              // CR3 register: the base addr of Page Directroy Table(PDT)      //CR3寄存器：页目录表的基地址
+    uint32_t flags;                             // Process flag      //进程标志
+    char name[PROC_NAME_LEN + 1];               // Process name     //进程名
+    list_entry_t list_link;                     // Process link list        //进程链表
+    list_entry_t hash_link;                     // Process hash list        //进程哈希表
 };
 
 #define le2proc(le, member)         \

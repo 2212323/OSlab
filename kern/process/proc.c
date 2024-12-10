@@ -82,6 +82,7 @@ void forkrets(struct trapframe *tf);
 void switch_to(struct context *from, struct context *to);
 
 // alloc_proc - alloc a proc_struct and init all fields of proc_struct
+// alloc_proc - 分配一个 proc_struct 并初始化所有字段
 static struct proc_struct *
 alloc_proc(void) {
     struct proc_struct *proc = kmalloc(sizeof(struct proc_struct));
@@ -102,22 +103,22 @@ alloc_proc(void) {
      *       uint32_t flags;                             // Process flag
      *       char name[PROC_NAME_LEN + 1];               // Process name
      */
-    proc->state = PROC_UNINIT;
+    proc->state = PROC_UNINIT;//将进程初始化为 未初始化状态
     proc->pid = -1;
     proc->runs = 0;
     proc->kstack = 0;
-    proc->need_resched = 0;
+    proc->need_resched = 0; //bool值：需要重新调度以释放CPU？
     proc->parent = NULL;
     proc->mm = NULL;
-    memset(&(proc->context), 0, sizeof(struct context));
+    memset(&(proc->context), 0, sizeof(struct context));//使用 memset 将 context 结构体的所有字段初始化为 0。
     proc->tf = NULL;
-    proc->cr3 = boot_cr3;
-    proc->flags = 0;
-    memset(proc->name, 0, PROC_NAME_LEN + 1);
-
+    proc->cr3 = boot_cr3;//boot_cr3 是 boot_pgdir的物理地址
+    proc->flags = 0;    //保存进程的标志信息，用于记录进程的特定属性或状态。（无符号整数类型）
+    memset(proc->name, 0, PROC_NAME_LEN + 1);//使用 memset 将 name 字符数组的所有元素初始化为 0。
 
     }
     return proc;
+
 }
 
 // set_proc_name - set the name of proc
@@ -215,7 +216,7 @@ proc_run(struct proc_struct *proc) {
         {
             current = proc;
             lcr3(next->cr3);
-            switch_to(&(prev->context), &(next->context));
+            switch_to(&(prev->context), &(next->context));//
         }
         local_intr_restore(intr_flag);
     }
@@ -232,7 +233,7 @@ forkret(void) {
     forkrets(current->tf);
 }
 
-// hash_proc - add proc into proc hash_list
+// hash_proc - add proc into proc hash_list //将进程添加到进程哈希表
 static void
 hash_proc(struct proc_struct *proc) {
     list_add(hash_list + pid_hashfn(proc->pid), &(proc->hash_link));
@@ -275,7 +276,8 @@ static int
 setup_kstack(struct proc_struct *proc) {
     struct Page *page = alloc_pages(KSTACKPAGE);
     if (page != NULL) {
-        proc->kstack = (uintptr_t)page2kva(page);
+        //将内核虚拟地址保存到进程控制块（proc_struct）的 kstack 字段中。
+        proc->kstack = (uintptr_t)page2kva(page);//调用 page2kva 函数将页面结构体指针转换为内核虚拟地址
         return 0;
     }
     return -E_NO_MEM;
@@ -443,7 +445,7 @@ proc_init(void) {
     }
 
     // 分配 idleproc 进程结构
-    if ((idleproc = alloc_proc()) == NULL) {
+    if ((idleproc = alloc_proc()) == NULL) { //调用 alloc_proc 函数分配一个新的进程结构 idleproc
         panic("cannot alloc idleproc.\n");
     }
 

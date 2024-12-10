@@ -12,6 +12,7 @@
 #include <stdlib.h>
 #include <assert.h>
 #include <unistd.h>
+//#include <cow.h>
 
 /* ------------- process/thread mechanism design&implementation -------------
 (an simplified Linux process/thread mechanism )
@@ -87,7 +88,6 @@ static struct proc_struct *
 alloc_proc(void) {
     struct proc_struct *proc = kmalloc(sizeof(struct proc_struct));
     if (proc != NULL) {
-
     //LAB4:EXERCISE1 YOUR CODE
     /*
      * below fields in proc_struct need to be initialized
@@ -104,20 +104,6 @@ alloc_proc(void) {
      *       uint32_t flags;                             // Process flag
      *       char name[PROC_NAME_LEN + 1];               // Process name
      */
-     proc->state = PROC_UNINIT;//将进程初始化为 未初始化状态
-    proc->pid = -1;
-    proc->runs = 0;
-    proc->kstack = 0;
-    proc->need_resched = 0; //bool值：需要重新调度以释放CPU？
-    proc->parent = NULL;
-    proc->mm = NULL;
-    memset(&(proc->context), 0, sizeof(struct context));//使用 memset 将 context 结构体的所有字段初始化为 0。
-    proc->tf = NULL;
-    proc->cr3 = boot_cr3;//boot_cr3 是 boot_pgdir的物理地址
-    proc->flags = 0;    //保存进程的标志信息，用于记录进程的特定属性或状态。（无符号整数类型）
-    memset(proc->name, 0, PROC_NAME_LEN + 1);//使用 memset 将 name 字符数组的所有元素初始化为 0。
-
-
 
      //LAB5 YOUR CODE : (update LAB4 steps)
      /*
@@ -125,12 +111,22 @@ alloc_proc(void) {
      *       uint32_t wait_state;                        // waiting state
      *       struct proc_struct *cptr, *yptr, *optr;     // relations between processes
      */
-
-    proc->wait_state = 0;
-    proc->cptr = NULL;
-    proc->yptr = NULL;
-    proc->optr = NULL;
-
+        proc->state = PROC_UNINIT;
+        proc->pid = -1;
+        proc->runs = 0;
+        proc->kstack = 0;
+        proc->need_resched = 0;
+        proc->parent = NULL;
+        proc->mm = NULL;
+        memset(&(proc->context), 0, sizeof(struct context));
+        proc->tf = NULL;
+        proc->cr3 = boot_cr3;
+        proc->flags = 0;
+        memset(proc->name, 0, PROC_NAME_LEN);
+        proc->wait_state = 0;
+        proc->cptr = NULL;
+        proc->optr = NULL;
+        proc->yptr = NULL;
     }
     return proc;
 }
@@ -227,17 +223,16 @@ proc_run(struct proc_struct *proc) {
         *   lcr3():                   Modify the value of CR3 register
         *   switch_to():              Context switching between two processes
         */
-
-       
-bool intr_flag;
+        bool intr_flag;
         struct proc_struct *prev = current, *next = proc;
         local_intr_save(intr_flag);
         {
             current = proc;
             lcr3(next->cr3);
-            switch_to(&(prev->context), &(next->context));//
+            switch_to(&(prev->context), &(next->context));
         }
         local_intr_restore(intr_flag);
+
     }
 }
 
@@ -381,7 +376,8 @@ copy_thread(struct proc_struct *proc, uintptr_t esp, struct trapframe *tf) {
 
     // Set a0 to 0 so a child process knows it's just forked
     proc->tf->gpr.a0 = 0;
-    proc->tf->gpr.sp = (esp == 0) ? (uintptr_t)proc->tf : esp;
+    // proc->tf->gpr.sp = (esp == 0) ? (uintptr_t)proc->tf : esp;
+    proc->tf->gpr.sp = (esp == 0) ? (uintptr_t)proc->tf - 4 : esp;
 
     proc->context.ra = (uintptr_t)forkret;
     proc->context.sp = (uintptr_t)(proc->tf);
@@ -434,19 +430,32 @@ do_fork(uint32_t clone_flags, uintptr_t stack, struct trapframe *tf) {
     *    update step 1: set child proc's parent to current process, make sure current process's wait_state is 0
     *    update step 5: insert proc_struct into hash_list && proc_list, set the relation links of process
     */
-
-    proc = alloc_proc();
+    if((proc = alloc_proc()) == NULL) {
+        goto fork_out;
+    }
     proc->parent = current;
-    setup_kstack(proc);
-    copy_mm(clone_flags, proc);
+    assert(current->wait_state == 0);
+    if(setup_kstack(proc) != 0) {
+        goto bad_fork_cleanup_proc;
+    }
+    if(copy_mm(clone_flags, proc) != 0) {
+        goto bad_fork_cleanup_kstack;
+    }
+    // if(cow_copy_mm(proc) != 0) {
+    //     goto bad_fork_cleanup_kstack;
+    // }
     copy_thread(proc, stack, tf);
-    int pid = get_pid();
-    proc->pid = pid;
-    hash_proc(proc);
-    list_add(&proc_list, &(proc->list_link));
-    nr_process++;
-    proc->state = PROC_RUNNABLE;
+    bool intr_flag;
+    local_intr_save(intr_flag);
+    {
+        proc->pid = get_pid();
+        hash_proc(proc);
+        set_links(proc);
+    }
+    local_intr_restore(intr_flag);
+    wakeup_proc(proc);
     ret = proc->pid;
+ 
 fork_out:
     return ret;
 
@@ -646,13 +655,13 @@ load_icode(unsigned char *binary, size_t size) {
      *          tf->status should be appropriate for user program (the value of sstatus)
      *          hint: check meaning of SPP, SPIE in SSTATUS, use them by SSTATUS_SPP, SSTATUS_SPIE(defined in risv.h)
      */
+
     tf->gpr.sp = USTACKTOP;
     tf->epc = elf->e_entry;
     // sstatus &= ~SSTATUS_SPP;
     // sstatus &= SSTATUS_SPIE;
     // tf->status = sstatus;
     tf->status = sstatus & ~(SSTATUS_SPP | SSTATUS_SPIE);
-
 
     ret = 0;
 out:
@@ -914,4 +923,3 @@ cpu_idle(void) {
         }
     }
 }
-

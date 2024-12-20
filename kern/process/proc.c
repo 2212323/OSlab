@@ -648,9 +648,7 @@ load_icode(unsigned char *binary, size_t size) {
      */
     tf->gpr.sp = USTACKTOP;
     tf->epc = elf->e_entry;
-    // sstatus &= ~SSTATUS_SPP;
-    // sstatus &= SSTATUS_SPIE;
-    // tf->status = sstatus;
+
     tf->status = sstatus & ~(SSTATUS_SPP | SSTATUS_SPIE);
 
 

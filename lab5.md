@@ -14,6 +14,29 @@ do_execv函数调用load_icode（位于kern/process/proc.c中）来加载并解�
 请在实验报告中简要说明你的设计实现过程。
 
 请简要描述这个用户态进程被ucore选择占用CPU执行（RUNNING态）到具体执行应用程序第一条指令的整个经过。
+
+## 代码
+
+将sp设置为栈顶，epc设置为文件的入口地址，sstatus的SPP位清零，代表异常来自用户态，之后需要返回用户态；SPIE位清零，表示不启用中断。
+
+```c
+tf->gpr.sp = USTACKTOP;
+tf->epc = elf->e_entry;
+tf->status = sstatus & ~(SSTATUS_SPP | SSTATUS_SPIE);
+```
+
+## 执行过程
+1. 在init_main中通过kernel_thread调用do_fork创建并唤醒线程，使其执行函数user_main，这时该线程状态已经为PROC_RUNNABLE，表明该线程开始运行
+2. 在user_main中通过宏KERNEL_EXECVE，调用kernel_execve
+3. 在kernel_execve中执行ebreak，发生断点异常，转到__alltraps，转到trap，再到trap_dispatch，然后到exception_handler，最后到CAUSE_BREAKPOINT处
+4. 在CAUSE_BREAKPOINT处调用syscall
+5. 在syscall中根据参数，确定执行sys_exec，调用do_execve
+6. 在do_execve中调用load_icode，加载文件
+7. 加载完毕后一路返回，直到__alltraps的末尾，接着执行__trapret后的内容，到sret，表示退出S态，回到用户态执行，这时开始执行用户的应用程序
+
+
+
+
 # 练习2: 父进程复制自己的内存空间给子进程（需要编码）
 创建子进程的函数do_fork在执行中将拷贝当前进程（即父进程）的用户内存地址空间中的合法内容到新进程中（子进程），完成内存资源的复制。具体是通过copy_range函数（位于kern/mm/pmm.c中）实现的，请补充copy_range的实现，确保能够正确执行。
 
@@ -22,12 +45,60 @@ do_execv函数调用load_icode（位于kern/process/proc.c中）来加载并解�
 如何设计实现Copy on Write机制？给出概要设计，鼓励给出详细设计。
 Copy-on-write（简称COW）的基本概念是指如果有多个使用者对一个资源A（比如内存块）进行读操作，则每个使用者只需获得一个指向同一个资源A的指针，就可以该资源了。若某使用者需要对这个资源A进行写操作，系统会对该资源进行拷贝操作，从而使得该“写操作”使用者获得一个该资源A的“私有”拷贝—资源B，可对资源B进行写操作。该“写操作”使用者对资源B的改变对于其他的使用者而言是不可见的，因为其他使用者看到的还是资源A。
 
+
+首先获取源地址和目的地址对应的内核虚拟地址，然后拷贝内存，最后将拷贝完成的页插入到页表中。
+
+```c
+uintptr_t* src = page2kva(page);
+uintptr_t* dst = page2kva(npage);
+memcpy(dst, src, PGSIZE);
+ret = page_insert(to, npage, start, perm);
+```
+
+COW设计
+在fork时，将父线程的所有页表项设置为只读，在新线程的结构中只复制栈和虚拟内存的页表，不为其分配新的页
+切换到子线程执行时，如果子线程需要修改一页的内容，会访问页表，由于该页不允许被修改，所以会引发异常
+异常处理部分，遇到该类异常，重新分配一块空间，将访问的页面复制进去，更新子线程的页表项
+
+
+
 # 练习3: 阅读分析源代码，理解进程执行 fork/exec/wait/exit 的实现，以及系统调用的实现（不需要编码）
 请在实验报告中简要说明你对 fork/exec/wait/exit函数的分析。并回答如下问题：
 
 请分析fork/exec/wait/exit的执行流程。重点关注哪些操作是在用户态完成，哪些是在内核态完成？内核态与用户态程序是如何交错执行的？内核态执行结果是如何返回给用户程序的？
 请给出ucore中一个用户态进程的执行状态生命周期图（包执行状态，执行状态之间的变换关系，以及产生变换的事件或函数调用）。（字符方式画即可）
 执行：make grade。如果所显示的应用程序检测都输出ok，则基本正确。（使用的是qemu-1.0.1）
+
+
+
+函数分析
+fork：通过发起系统调用执行do_fork函数。用于创建并唤醒线程，可以通过sys_fork或者kernel_thread调用。
+初始化一个新线程
+为新线程分配内核栈空间
+为新线程分配新的虚拟内存或与其他线程共享虚拟内存
+获取原线程的上下文与中断帧，设置当前线程的上下文与中断帧
+将新线程插入哈希表和链表中
+唤醒新线程
+返回线程id
+exec：通过发起系统调用执行do_execve函数。用于创建用户空间，加载用户程序，可以通过sys_exec调用。
+回收当前线程的虚拟内存空间
+为当前线程分配新的虚拟内存空间并加载应用程序
+wait：通过发起系统调用执行do_wait函数。用于等待线程完成，可以通过sys_wait或者init_main调用。
+查找状态为PROC_ZOMBIE的子线程；如果查询到拥有子线程的线程，则设置线程状态并切换线程；如果线程已退出，则调用do_exit
+将线程从哈希表和链表中删除
+释放线程资源
+exit：通过发起系统调用执行do_exit函数。用于退出线程，可以通过sys_exit、trap、do_execve、do_wait调用。具体执行内容：
+如果当前线程的虚拟内存没有用于其他线程，则销毁该虚拟内存
+将当前线程状态设为PROC_ZOMBIE，唤醒该线程的父线程
+调用schedule切换到其他线程
+
+
+
+执行流程
+系统调用部分在内核态进行，用户程序的执行在用户态进行
+内核态通过系统调用结束后的sret指令切换到用户态，用户态通过发起系统调用产生ebreak异常切换到内核态
+内核态执行的结果通过kernel_execve_ret将中断帧添加到线程的内核栈中，从而将结果返回给用户
+
 
 # 扩展练习 Challenge
 实现 Copy on Write （COW）机制

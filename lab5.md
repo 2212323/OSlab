@@ -26,8 +26,19 @@ tf->status = sstatus & ~(SSTATUS_SPP | SSTATUS_SPIE);
 ```
 
 ## 执行过程
-1. 在init_main中通过kernel_thread调用do_fork创建并唤醒线程，使其执行函数user_main，这时该线程状态已经为PROC_RUNNABLE，表明该线程开始运行
+1. 在init_main中通过kernel_thread调用do_fork（(在这里改变进程状态为runnable)）创建并唤醒线程，使其执行函数user_main，这时该线程状态已经为PROC_RUNNABLE，表明该线程开始运行
 2. 在user_main中通过宏KERNEL_EXECVE，调用kernel_execve
+    kernel_execve 的函数，用于在内核中执行一个新的程序。该函数通过内联汇编调用系统调用接口来实现这一功能
+
+    1. 计算程序名称的长度：计算传入的程序名称 name 的长度，并将其存储在 len 变量中。
+    2. 内联汇编调用系统调用接口：通过内联汇编设置系统调用参数，并触发系统调用。
+        + 设置系统调用号和参数。
+        + 触发系统调用。
+        + 存储系统调用的返回值。
+    3. 打印返回值：使用 cprintf 函数打印系统调用的返回值。
+    4. 返回系统调用的返回值：返回系统调用的返回值。
+
+
 3. 在kernel_execve中执行ebreak，发生断点异常，转到__alltraps，转到trap，再到trap_dispatch，然后到exception_handler，最后到CAUSE_BREAKPOINT处
 4. 在CAUSE_BREAKPOINT处调用syscall
 5. 在syscall中根据参数，确定执行sys_exec，调用do_execve

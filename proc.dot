@@ -1,0 +1,66 @@
+digraph G {
+    rankdir=LR;
+    node [shape=box];
+
+    // Functions
+    do_fork [label="do_fork (创建进程)"];
+    alloc_proc [label="alloc_proc (分配进程)"];
+    setup_kstack [label="setup_kstack (设置内核栈)"];
+    copy_mm [label="copy_mm (复制内存管理)"];
+    copy_thread [label="copy_thread (复制线程)"];
+    get_pid [label="get_pid (获取进程ID)"];
+    hash_proc [label="hash_proc (哈希进程)"];
+    wakeup_proc [label="wakeup_proc (唤醒进程)"];
+    proc_run [label="proc_run (运行进程)"];
+    do_execve [label="do_execve (执行程序)"];
+    do_exit [label="do_exit (退出进程)"];
+    kernel_thread [label="kernel_thread (内核线程)"];
+    switch_to [label="switch_to (切换到)"];
+    proc_init [label="proc_init (初始化进程)"];
+    find_proc [label="find_proc (查找进程)"];
+    cpu_idle [label="cpu_idle (CPU空闲)"];
+    schedule [label="schedule (调度)"];
+    mm_create [label="mm_create (创建内存管理)"];
+    setup_pgdir [label="setup_pgdir (设置页目录)"];
+    lock_mm [label="lock_mm (锁定内存管理)"];
+    dup_mmap [label="dup_mmap (复制内存映射)"];
+    unlock_mm [label="unlock_mm (解锁内存管理)"];
+    exit_mmap [label="exit_mmap (退出内存映射)"];
+    put_pgdir [label="put_pgdir (放置页目录)"];
+    mm_destroy [label="mm_destroy (销毁内存管理)"];
+
+    // Relationships
+    do_fork -> alloc_proc;
+    do_fork -> setup_kstack;
+    do_fork -> copy_mm;
+    do_fork -> copy_thread;
+    do_fork -> get_pid;
+    do_fork -> hash_proc;
+    do_fork -> wakeup_proc;
+    do_fork -> proc_run;
+    do_fork -> do_execve;
+    do_fork -> do_exit;
+
+    kernel_thread -> do_fork;
+
+    proc_run -> switch_to;
+
+    proc_init -> alloc_proc;
+    proc_init -> kernel_thread;
+    proc_init -> find_proc;
+
+    cpu_idle -> schedule;
+
+    copy_mm -> mm_create;
+    copy_mm -> setup_pgdir;
+    copy_mm -> lock_mm;
+    copy_mm -> dup_mmap;
+    copy_mm -> unlock_mm;
+    copy_mm -> exit_mmap;
+    copy_mm -> put_pgdir;
+    copy_mm -> mm_destroy;
+
+    dup_mmap -> vma_create;
+    dup_mmap -> insert_vma_struct;
+    dup_mmap -> copy_range;
+}

@@ -1,0 +1,14 @@
+digraph process_states {
+    none [label="none"];
+    PROC_UNINIT [label="PROC_UNINIT"];
+    PROC_RUNNABLE [label="PROC_RUNNABLE"];
+    PROC_SLEEPING [label="PROC_SLEEPING"];
+    PROC_ZOMBIE [label="PROC_ZOMBIE"];
+
+    none -> PROC_UNINIT [label="alloc_proc"];
+    PROC_UNINIT -> PROC_RUNNABLE [label="wakeup_proc"];
+    PROC_RUNNABLE -> PROC_SLEEPING [label="do_wait"];
+    PROC_SLEEPING -> PROC_RUNNABLE [label="wake_up"];
+    PROC_RUNNABLE -> PROC_ZOMBIE [label="do_exit"];
+    PROC_RUNNABLE -> none [label="do_fork"];
+}

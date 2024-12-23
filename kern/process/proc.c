@@ -524,6 +524,9 @@ do_exit(int error_code) {
  * @binary:  the memory addr of the content of binary program
  * @size:  the size of the content of binary program
  */
+// load_icode函数用于加载并解析一个处于内存中的ELF执行文件格式的应用程序。
+// 该函数首先创建一个新的mm_struct结构体，然后调用setup_pgdir函数创建一个新的页目录表，
+// 然后调用mm_map函数将二进制程序的TEXT/DATA段映射到进程的内存空间中，
 static int
 load_icode(unsigned char *binary, size_t size) {
     if (current->mm != NULL) {
@@ -658,9 +661,7 @@ load_icode(unsigned char *binary, size_t size) {
 
     tf->gpr.sp = USTACKTOP;
     tf->epc = elf->e_entry;
-    // sstatus &= ~SSTATUS_SPP;
-    // sstatus &= SSTATUS_SPIE;
-    // tf->status = sstatus;
+
     tf->status = sstatus & ~(SSTATUS_SPP | SSTATUS_SPIE);
 
     ret = 0;
@@ -689,21 +690,22 @@ do_execve(const char *name, size_t len, unsigned char *binary, size_t size) {
     }
 
     char local_name[PROC_NAME_LEN + 1];
-    memset(local_name, 0, sizeof(local_name));
-    memcpy(local_name, name, len);
+    memset(local_name, 0, sizeof(local_name));//将local_name的前sizeof(local_name)个字节用0替换
+    memcpy(local_name, name, len);//将name的前len个字节复制到local_name中
 
     if (mm != NULL) {
         cputs("mm != NULL");
-        lcr3(boot_cr3);
+        lcr3(boot_cr3);//将CR3寄存器的值设置为boot_cr3的值
         if (mm_count_dec(mm) == 0) {
-            exit_mmap(mm);
-            put_pgdir(mm);
-            mm_destroy(mm);
+            exit_mmap(mm);  //释放mm的内存映射
+            put_pgdir(mm);  //释放mm的页目录表
+            mm_destroy(mm); //释放mm
         }
         current->mm = NULL;
     }
     int ret;
-    if ((ret = load_icode(binary, size)) != 0) {
+    //do_execve函数调用load_icode（位于kern/process/proc.c中）来加载并解析一个处于内存中的ELF执行文件格式的应用程序。
+    if ((ret = load_icode(binary, size)) != 0) {//!!!!!!!!!!!!!
         goto execve_exit;
     }
     set_proc_name(current, local_name);
@@ -848,7 +850,7 @@ user_main(void *arg) {
 #ifdef TEST
     KERNEL_EXECVE2(TEST, TESTSTART, TESTSIZE);
 #else
-    KERNEL_EXECVE(exit);
+    KERNEL_EXECVE(exit);//实际上，就是加载了存储在这个位置的程序exit并在user_main这个进程里开始执行。这时user_main就从内核进程变成了用户进程
 #endif
     panic("user_main execve failed.\n");
 }
@@ -859,7 +861,7 @@ init_main(void *arg) {
     size_t nr_free_pages_store = nr_free_pages();
     size_t kernel_allocated_store = kallocated();
 
-    int pid = kernel_thread(user_main, NULL, 0);
+    int pid = kernel_thread(user_main, NULL, 0); //进入kernel_thread调用do_fork(在这里改变进程状态为runnable),创建一个新的内核线程，执行user_main函数
     if (pid <= 0) {
         panic("create user_main failed.\n");
     }
